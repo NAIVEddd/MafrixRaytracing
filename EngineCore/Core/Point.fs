@@ -35,7 +35,7 @@ and Vector(x:double, y:double, z:double) =
         match length with
         | 0.0 -> Vector()
         | _ -> Vector(x/length, y/length, z/length)
-    member this.Cross (v:Vector) = Vector(y*v.z - z*v.y, x*v.z - z*v.x, x*v.y - y*v.x)
+    member this.Cross (v:Vector) = Vector(y*v.z - z*v.y, z*v.x - x*v.z, x*v.y - y*v.x)
     member this.Dot(v:Vector) = x*v.x + y*v.y + z*v.z
     static member (+) (l:Vector, r:Vector) = Vector(l.x + r.x, l.y + r.y, l.z + r.z)
     static member (+) (l:Point, r:Vector) = Point(l.x+r.x, l.y+r.y, l.z+r.z)

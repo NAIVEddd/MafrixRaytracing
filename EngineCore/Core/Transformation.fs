@@ -34,7 +34,11 @@ type Matrix4x4(numList:double[]) =
         let res = [|
             for i in 0..3 do
                 Array.zip pl (r.GetColumn i) |> Array.map (fun (f, b) -> f*b) |> Array.sum |]
-        Point(res[0], res[1], res[2])
+        match res[3] with
+        | 1.0 -> Point(res[0], res[1], res[2])
+        | 0.0 -> assert(false)
+                 Point()
+        | w -> Point(res[0]/w, res[1]/w, res[2]/w)
     static member (*) (l:Vector, r:Matrix4x4) =
         let vl = [|l.x; l.y; l.z; 0|]
         let res = [|
@@ -43,10 +47,10 @@ type Matrix4x4(numList:double[]) =
         Vector(res[0], res[1], res[2])
 
     static member MakeDisplacementMatrix(x, y, z) =
-        let a = [| 1.0; 0.0; 0.0; x;
-                   0.0; 1.0; 0.0; y;
-                   0.0; 0.0; 1.0; z;
-                   0.0; 0.0; 0.0; 1.0|]
+        let a = [| 1.0; 0.0; 0.0; 0.0;
+                   0.0; 1.0; 0.0; 0.0;
+                   0.0; 0.0; 1.0; 0.0;
+                   x; y; z; 1.0|]
         Matrix4x4(a)
     static member MakeDisplacementInvMatrix(x, y, z) =
         let a = [| 1.0; 0.0; 0.0; 0.0;

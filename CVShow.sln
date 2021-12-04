@@ -5,7 +5,7 @@ VisualStudioVersion = 17.0.31912.275
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "CVShow", "CVShow\CVShow.fsproj", "{CA07D7A7-8E06-49EC-A444-CCF5818CF19C}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "EngineCore", "EngineCore\EngineCore.fsproj", "{5AD09E8A-1CEF-4737-84BA-965CD52B655B}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "EngineCore", "EngineCore\EngineCore.fsproj", "{5AD09E8A-1CEF-4737-84BA-965CD52B655B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -17,8 +17,8 @@ Global
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{CA07D7A7-8E06-49EC-A444-CCF5818CF19C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{CA07D7A7-8E06-49EC-A444-CCF5818CF19C}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{CA07D7A7-8E06-49EC-A444-CCF5818CF19C}.Debug|x64.ActiveCfg = Debug|x64
-		{CA07D7A7-8E06-49EC-A444-CCF5818CF19C}.Debug|x64.Build.0 = Debug|x64
+		{CA07D7A7-8E06-49EC-A444-CCF5818CF19C}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{CA07D7A7-8E06-49EC-A444-CCF5818CF19C}.Debug|x64.Build.0 = Debug|Any CPU
 		{CA07D7A7-8E06-49EC-A444-CCF5818CF19C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CA07D7A7-8E06-49EC-A444-CCF5818CF19C}.Release|Any CPU.Build.0 = Release|Any CPU
 		{CA07D7A7-8E06-49EC-A444-CCF5818CF19C}.Release|x64.ActiveCfg = Release|x64

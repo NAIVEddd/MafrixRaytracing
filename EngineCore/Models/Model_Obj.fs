@@ -119,11 +119,11 @@ let LoadModel (filePath:string) =
                 assert(nums.Length = 3)
                 assert(nums[0].Length = nums[1].Length && nums[1].Length = nums[2].Length)
                 Array.zip3 nums[0] nums[1] nums[2]
-                    |> Array.map (fun (a, b, c) -> Indexer(a, b, c)))
+                    |> Array.map (fun (a, b, c) -> Indexer(a-1, b-1, c-1)))
             assert(face.Length = 3)
             objinfo.Faces[count] <- (face[0], face[1], face[2])
             count <- if (count + 1) = objinfo.Faces.Length then 0 else count + 1
 
         | _ -> ()
 
-    printf "%A" objinfo.Vertexs[0]
+    objinfo

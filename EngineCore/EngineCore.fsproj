@@ -9,6 +9,7 @@
     <Compile Include="Core\Point.fs" />
     <Compile Include="Core\Transformation.fs" />
     <Compile Include="Core\Camera.fs" />
+    <Compile Include="Core\Pipeline.fs" />
     <Compile Include="Models\Model_Obj.fs" />
     <Compile Include="Library.fs" />
   </ItemGroup>

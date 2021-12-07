@@ -2,6 +2,7 @@
 
 open Microsoft.FSharp.Core.Operators
 open Microsoft.FSharp.Collections
+open System
 open Point
 
 type Matrix4x4(numList:double[]) =
@@ -17,8 +18,7 @@ type Matrix4x4(numList:double[]) =
         let idxs = [|for i in 0..3 do idx + i*4 |]
         [| for i in idxs do numList[i] |]
     member this.Combine (other:Matrix4x4) =
-        let newMatrix = [| for i = 1 to 16 do 0.0 |]
-        Matrix4x4(newMatrix)
+        this * other
     
     override this.ToString() =
         sprintf "\n%A\n%A\n%A\n%A\n" (this.GetRow 0) (this.GetRow 1) (this.GetRow 2) (this.GetRow 3)
@@ -59,9 +59,10 @@ type Matrix4x4(numList:double[]) =
                    -x; -y; -z; 1.0|]
         Matrix4x4(a)
     static member MakeRotateMatrix(roll, pitch, yaw) =
-        let a = [|  1.0; 0.0; 0.0; roll;
-                    0.0; 1.0; 0.0; pitch;
-                    0.0; 0.0; 1.0; yaw;
+        let yawTheta = yaw * Math.PI / 180.0
+        let a = [|  cos(yawTheta); 0.0; sin(yawTheta); 0.0;
+                    0.0; 1.0; 0.0; 0.0;
+                    -sin(yawTheta); 0.0; cos(yawTheta); 0.0;
                     0.0; 0.0; 0.0; 1.0|]
         Matrix4x4(a)
     static member MakeRotateInvMatrix(roll, pitch, yaw) =

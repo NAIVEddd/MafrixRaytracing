@@ -133,12 +133,6 @@ let DrawWireframeToScreen (screen:Mat) (color:Scalar) (cam:Camera) (pos:Point) (
         let vec = Vec3b(byte (finColor[i].Val2), byte (finColor[i].Val1), byte (finColor[i].Val0))
         for (x,y) in points do
             indexer[y,x] <- vec
-        let cvp1 = OpenCvSharp.Point(p1.x, p1.y)
-        let cvp2 = OpenCvSharp.Point(p2.x, p2.y)
-        let cvp3 = OpenCvSharp.Point(p3.x, p3.y)
-        screen.Line(cvp1, cvp2, color)
-        screen.Line(cvp1, cvp3, color)
-        screen.Line(cvp2, cvp3, color)
         i <- i + 1
 
 

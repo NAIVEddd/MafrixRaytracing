@@ -1,4 +1,5 @@
-﻿open DrawModelCar
+﻿open PipelineDraw
+open DrawModelCar
 open DrawWireBox
 
 // For more information see https://aka.ms/fsharp-console-apps
@@ -9,4 +10,4 @@ open DrawWireBox
 //    let vec = Vec3b(byte 0, byte 0, byte 255)
 //    indexer[200, i] <- vec
 
-DrawCar()
+PipelineDrawCar()

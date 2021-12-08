@@ -10,6 +10,7 @@
   <ItemGroup>
     <Compile Include="Sample\DrawModelCar.fs" />
     <Compile Include="Sample\DrawWireBox.fs" />
+    <Compile Include="Sample\PipelineDraw.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 

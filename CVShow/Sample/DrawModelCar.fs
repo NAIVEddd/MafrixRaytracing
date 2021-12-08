@@ -95,10 +95,10 @@ let LightRander(cam:Camera, light:Light, objColor:Scalar, vs:Point[], idxs:Index
     for idx in idxs do
         let col =
             match light with
-            | Ambient ambient-> Scalar(objColor.Val0 * (float ambient.color.r/255.0),
+            | AmbientLight ambient-> Scalar(objColor.Val0 * (float ambient.color.r/255.0),
                                     objColor.Val1 * (float ambient.color.g/255.0),
                                     objColor.Val2 * (float ambient.color.b/255.0))
-            | Direction direction ->
+            | DirectionLight direction ->
                 let u = vs[idx.j] - vs[idx.i]
                 let v = vs[idx.k] - vs[idx.i]
                 let normal = u.Cross(v).Normalize
@@ -109,14 +109,14 @@ let LightRander(cam:Camera, light:Light, objColor:Scalar, vs:Point[], idxs:Index
                         -dp * objColor.Val2 * (float direction.diffuse.b/255.0))
                 else
                     Scalar()
-            | Point point -> Scalar()
+            | PointLight point -> Scalar()
         yield col
     |]
 
 let DrawWireframeToScreen (screen:Mat) (color:Scalar) (cam:Camera) (pos:Point) (vs:Point[]) (idxs:Indexer[]) =
-    let objColor = Color(byte color.Val0, byte color.Val1, byte color.Val2, byte color.Val3)
-    let light = Ambient (AmbientLight(Color(60,60,60,60)))
-    let dirLight = Direction (DirectionLight(Color(), Color(200,200,200,0), Color(), Vector(0,-30,1)))
+    let objColor = Color(color.Val0, color.Val1, color.Val2, color.Val3)
+    let light = AmbientLight (Ambient_Light(Color(60,60,60,1)))
+    let dirLight = DirectionLight (Direction_Light(Color(), Color(200,200,200,1), Color(), Vector(0,-30,1)))
     let worldVS = LocalToWorld pos vs
     let frontIdxs = RemoveBackfaces cam worldVS idxs
     printfn "filted idx:%A\n" frontIdxs

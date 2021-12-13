@@ -1,4 +1,5 @@
-﻿open PipelineDraw
+﻿open DrawWithTexture
+open PipelineDraw
 open DrawModelCar
 open DrawWireBox
 
@@ -10,4 +11,4 @@ open DrawWireBox
 //    let vec = Vec3b(byte 0, byte 0, byte 255)
 //    indexer[200, i] <- vec
 
-PipelineDrawCar()
+DrawCarWithTexture()

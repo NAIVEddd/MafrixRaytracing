@@ -23,6 +23,12 @@ type Matrix4x4(numList:double[]) =
     override this.ToString() =
         sprintf "\n%A\n%A\n%A\n%A\n" (this.GetRow 0) (this.GetRow 1) (this.GetRow 2) (this.GetRow 3)
 
+    member this.Multiply(l:Point) =
+        let pl = [|l.x; l.y; l.z; 1|]
+        let res = [|
+            for i in 0..3 do
+                Array.zip pl (this.GetColumn i) |> Array.map (fun (f, b) -> f*b) |> Array.sum |]
+        Point(res[0], res[1], res[2]), res[3]
     static member (*) (l:Matrix4x4, r:Matrix4x4) =
         let res = [|
             for i in 0..3 do

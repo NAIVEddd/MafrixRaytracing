@@ -127,7 +127,7 @@ let DrawWireframeToScreen (screen:Mat) (color:Scalar) (cam:Camera) (pos:Point) (
         Array.map (fun (a,b) -> Scalar(a.Val0+b.Val0,a.Val1+b.Val1,a.Val2+b.Val2,a.Val3+b.Val3))
     let screenVS = worldVS |>
                     WorldToCamera cam |>
-                    CameraToPerspecctive cam |>
+                    CameraToPerspective cam |>
                     PerspectiveToScreen cam
     let rand = System.Random(10)
     let zbuffer = Array2D.init 1024 768 (fun i j -> 99999999.0)

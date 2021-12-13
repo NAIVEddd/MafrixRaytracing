@@ -7,6 +7,9 @@ type Point2D(x:double, y:double) =
 
     member this.x = x
     member this.y = y
+    static member (+) (l:Point2D, r:Point2D) = Point2D(l.x + r.x, l.y + r.y)
+    static member (*) (l:double, r:Point2D) = Point2D(l * r.x, l * r.y)
+    static member (*) (l:Point2D, r:double) = r*l
 
 type Point(x:double, y:double, z:double) =
     new() = Point(0)

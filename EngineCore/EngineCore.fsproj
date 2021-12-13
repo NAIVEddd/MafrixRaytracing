@@ -11,6 +11,7 @@
     <Compile Include="Core\Transformation.fs" />
     <Compile Include="Core\Camera.fs" />
     <Compile Include="Core\RenderTarget.fs" />
+    <Compile Include="Core\Texture.fs" />
     <Compile Include="Core\Light.fs" />
     <Compile Include="Core\Pipeline.fs" />
     <Compile Include="Models\Model_Obj.fs" />

@@ -12,50 +12,6 @@ open Engine.Core.Texture
 open Engine.Model.Obj
 
 
-
-let RemoveBackfacesFace (cam:Camera) (vs:Point[]) (idxs:(Indexer*Indexer*Indexer)[]) =
-    idxs |> Array.filter (fun (idx,_,_) ->
-        let u = vs[idx.j] - vs[idx.i]
-        let v = vs[idx.k] - vs[idx.i]
-        let normal = u.Cross(v)
-        let view = cam.Position - vs[idx.i]
-        let dp = normal.Dot(view)
-        dp > 0.0)
-//
-// pos,vs,idxs is 3D Object property
-let PipelineDrawTexture (screen:Screen) (cam:Camera) (lights:Light[]) (color:Color) (pos:Point) (vs:Point[]) (idxs:(Indexer*Indexer*Indexer)[]) (uvs:Point2D[]) (texture:Texture) =
-    screen.Reset()
-    let worldVS = LocalToWorld pos vs
-    let vsw = vs |> (fun (vs) ->
-            let mat = Matrix4x4.MakeDisplacementMatrix(pos.x, pos.y, pos.z)
-            vs |> Array.map (fun p -> mat.Multiply(p)))
-    let frontIdxs = RemoveBackfacesFace cam worldVS idxs
-    let tmpidxs = frontIdxs |> Array.map (fun (idx,_,_) ->idx)
-    let finColor = lights |> Array.map (fun light -> light.Render(cam, color, worldVS, tmpidxs)) |>
-                    Array.reduce (fun a b ->
-                        assert(a.Length = b.Length)
-                        Array.zip a b |> Array.map (fun (l,r) -> l+r))
-    let screenVS = worldVS |>
-                    WorldToCamera cam |>
-                    CameraToPerspective cam |>
-                    PerspectiveToScreen cam
-
-    let mutable i = 0
-    for (idx,uvidx,_) in frontIdxs do
-        let p1 = screenVS[idx.i]
-        let p2 = screenVS[idx.j]
-        let p3 = screenVS[idx.k]
-        let uv1 = uvs[uvidx.i]
-        let uv2 = uvs[uvidx.j]
-        let uv3 = uvs[uvidx.k]
-        let points = DrawTrangle_new cam [|p1;p2;p3|] [|uv1;uv2;uv3|]
-        points |> Array.map (fun (x,y,z,uv) ->
-            let color = texture.Sample(uv.x, uv.y)
-            let final = finColor[i].Uniform() * color
-            screen[x,y] <- final,z) |> ignore
-
-        i <- i + 1
-
 let DrawCarWithTexture() =
     //let car = LoadModel("../../../../3DModel/Renault12TL/Renault12TL.obj")
     //let baseColor = Cv2.ImRead("../../../../3DModel/Renault12TL/Renault12TL_BaseColor.png")
@@ -94,7 +50,7 @@ let DrawCarWithTexture() =
         let light = AmbientLight (Ambient_Light(Color(30,30,30,1)))
         let dirLight = DirectionLight (Direction_Light(Color(), Color(200,200,200,1), Color(), Vector(0,-30,1)))
 
-        PipelineDrawTexture screen cam [|light;dirLight|] color (Point()) vs car.Faces uvs texture
+        PipelineDraw screen cam [|light;dirLight|] color (Point()) vs car.Faces uvs texture
 
         let mat = new Mat(Size(1024, 768), MatType.CV_8UC3)
         let indexer = mat.GetGenericIndexer<Vec3b>()

@@ -113,12 +113,12 @@ let LightRander(cam:Camera, light:Light, objColor:Scalar, vs:Point[], idxs:Index
         yield col
     |]
 
-let DrawWireframeToScreen (screen:Mat) (color:Scalar) (cam:Camera) (pos:Point) (vs:Point[]) (idxs:Indexer[]) =
+let DrawWireframeToScreen (screen:Mat) (color:Scalar) (cam:Camera) (pos:Point) (vs:Point[]) idxs =
     let objColor = Color(color.Val0, color.Val1, color.Val2, color.Val3)
     let light = AmbientLight (Ambient_Light(Color(60,60,60,1)))
     let dirLight = DirectionLight (Direction_Light(Color(), Color(200,200,200,1), Color(), Vector(0,-30,1)))
     let worldVS = LocalToWorld pos vs
-    let frontIdxs = RemoveBackfaces cam worldVS idxs
+    let frontIdxs = RemoveBackfaces cam worldVS idxs |> Array.map (fun (a,_,_) -> a)
     printfn "filted idx:%A\n" frontIdxs
     let colors = LightRander(cam, light, color, worldVS, frontIdxs)
     let colors2 = LightRander(cam, dirLight, color, worldVS, frontIdxs)
@@ -161,7 +161,7 @@ let DrawCar() =
 
     let rand = System.Random(10)
     let color = Scalar(rand.Next(255), rand.Next(255), rand.Next(255))
-    DrawWireframeToScreen mat color cam (Point()) vs idxs
+    DrawWireframeToScreen mat color cam (Point()) vs car.Faces
 
     Cv2.ImShow("Manga", mat)
 

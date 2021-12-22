@@ -50,7 +50,7 @@ let DrawCarWithTexture() =
         let light = AmbientLight (Ambient_Light(Color(30,30,30,1)))
         let dirLight = DirectionLight (Direction_Light(Color(), Color(200,200,200,1), Color(), Vector(0,-30,1)))
 
-        PipelineDraw screen cam [|light;dirLight|] color (Point()) vs car.Faces uvs texture
+        PipelineDraw screen cam [|light;dirLight|] color (Point()) vs car.Faces uvs car.VertexNormals texture
 
         let mat = new Mat(Size(1024, 768), MatType.CV_8UC3)
         let indexer = mat.GetGenericIndexer<Vec3b>()

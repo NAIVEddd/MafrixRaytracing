@@ -43,7 +43,7 @@ let ComputeBarycentric2D(x:double, y:double, v:Point[]) =
     let gamma = (x*(v[0].y - v[1].y) + (v[1].x - v[0].x)*y + v[0].x*v[1].y - v[1].x*v[0].y) / (v[2].x*(v[0].y - v[1].y) + (v[1].x - v[0].x)*v[2].y + v[0].x*v[1].y - v[1].x*v[0].y)
     (alpha,beta,gamma)
 
-let DrawTrangle (cam:Camera) (points:Point[]) (uvs:Point2D[]) =
+let DrawTrangle (cam:Camera) (points:Point[]) (uvs:Point2D[]) (nms:Vector[]) =
     let minX,maxX,minY,maxY = max (int (points |> Array.minBy (fun e -> e.x)).x) 0,
                               min (int (points |> Array.maxBy (fun e -> e.x)).x) (cam.width-1),
                               max (int (points |> Array.minBy (fun e -> e.y)).y) 0,
@@ -60,12 +60,13 @@ let DrawTrangle (cam:Camera) (points:Point[]) (uvs:Point2D[]) =
                 alpha <= 1 && beta <= 1 && gamma <= 1 then
                 let zp = (alpha * points[0].z + beta * points[1].z + gamma * points[2].z)
                 let uv = alpha * uvs[0] + beta * uvs[1] + gamma * uvs[2]
-                yield x,y,zp,uv
+                let normal = alpha*nms[0] + beta*nms[1] + gamma*nms[2]
+                yield x,y,zp,uv,normal
     |]
 
 //
 // pos,vs,idxs is 3D Object property
-let PipelineDraw (screen:Screen) (cam:Camera) (lights:Light[]) (color:Color) (pos:Point) (vs:Point[]) (idxs:(Indexer*Indexer*Indexer)[]) (uvs:Point2D[]) (texture:Texture) =
+let PipelineDraw (screen:Screen) (cam:Camera) (lights:Light[]) (color:Color) (pos:Point) (vs:Point[]) (idxs:(Indexer*Indexer*Indexer)[]) (uvs:Point2D[]) (nms:Vector[]) (texture:Texture) =
     screen.Reset()
     let worldVS = LocalToWorld pos vs
     let vsw = vs |> (fun (vs) ->
@@ -83,17 +84,21 @@ let PipelineDraw (screen:Screen) (cam:Camera) (lights:Light[]) (color:Color) (po
                     PerspectiveToScreen cam
 
     let mutable i = 0
-    for (idx,uvidx,_) in frontIdxs do
+    for (idx,uvidx,nmidx) in frontIdxs do
         let p1 = screenVS[idx.i]
         let p2 = screenVS[idx.j]
         let p3 = screenVS[idx.k]
         let uv1 = uvs[uvidx.i]
         let uv2 = uvs[uvidx.j]
         let uv3 = uvs[uvidx.k]
-        let points = DrawTrangle cam [|p1;p2;p3|] [|uv1;uv2;uv3|]
-        points |> Array.map (fun (x,y,z,uv) ->
+        let nm1 = nms[nmidx.i]
+        let nm2 = nms[nmidx.j]
+        let nm3 = nms[nmidx.k]
+        let points = DrawTrangle cam [|p1;p2;p3|] [|uv1;uv2;uv3|] [|nm1;nm2;nm3|]
+        points |> Array.map (fun (x,y,z,uv,normal) ->
             let color = texture.Sample(uv.x, uv.y)
-            let final = finColor[i].Uniform() * color
+            let fin = lights[1].Sample_Li(cam, Point(x,y,z), normal)
+            let final = fin * color
             screen[x,y] <- final,z) |> ignore
 
         i <- i + 1

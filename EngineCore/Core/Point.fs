@@ -1,53 +1,52 @@
 ﻿module Engine.Core.Point
 
-type Point2D(x:double, y:double) =
-    new() = Point2D(0, 0)
+[<Struct>]
+type Point2D(_x:double, _y:double) =
     override this.ToString() =
-        sprintf "(%A, %A)" x y
+        sprintf "(%A, %A)" this.x this.y
 
-    member this.x = x
-    member this.y = y
+    member this.x = _x
+    member this.y = _y
     static member (+) (l:Point2D, r:Point2D) = Point2D(l.x + r.x, l.y + r.y)
     static member (*) (l:double, r:Point2D) = Point2D(l * r.x, l * r.y)
     static member (*) (l:Point2D, r:double) = r*l
 
-type Point(x:double, y:double, z:double) =
-    new() = Point(0)
+[<Struct>]
+type Point(_x:double, _y:double, _z:double) =
     new(n:double) = Point(n,n,n)
     override this.ToString() =
-        sprintf "P(%A, %A, %A)" x y z
+        sprintf "P(%A, %A, %A)" this.x this.y this.z
 
-    member this.x = x
-    member this.y = y
-    member this.z = z
+    member this.x = _x
+    member this.y = _y
+    member this.z = _z
     static member (-) (l:Point, r:Point) =
         Vector(l.x-r.x, l.y-r.y, l.z-r.z)
 
-and Vector(x:double, y:double, z:double) =
+and [<Struct>] Vector(_x:double, _y:double, _z:double) =
     //let length = sqrt(x*x + y*y + z*z)
-    new() = Vector(0, 0, 0)
     override this.ToString() =
-        sprintf "V(%A, %A, %A)" x y z
+        sprintf "V(%A, %A, %A)" this.x this.y this.z
 
-    member this.x = x
-    member this.y = y
-    member this.z = z
-    member this.Length = sqrt(x*x + y*y + z*z)//length
+    member this.x = _x
+    member this.y = _y
+    member this.z = _z
+    member this.Length = sqrt(this.x*this.x + this.y*this.y + this.z*this.z)//length
     member this.Normalize =
         let length = this.Length
         match length with
         | 0.0 -> Vector()
-        | _ -> Vector(x/length, y/length, z/length)
-    member this.Cross (v:Vector) = Vector(y*v.z - z*v.y, z*v.x - x*v.z, x*v.y - y*v.x)
-    member this.Dot(v:Vector) = x*v.x + y*v.y + z*v.z
+        | _ -> Vector(this.x/length, this.y/length, this.z/length)
+    member this.Cross (v:Vector) = Vector(this.y*v.z - this.z*v.y, this.z*v.x - this.x*v.z, this.x*v.y - this.y*v.x)
+    member this.Dot(v:Vector) = this.x*v.x + this.y*v.y + this.z*v.z
     static member (+) (l:Vector, r:Vector) = Vector(l.x + r.x, l.y + r.y, l.z + r.z)
     static member (+) (l:Point, r:Vector) = Point(l.x+r.x, l.y+r.y, l.z+r.z)
     static member (+) (l:Vector, r:Point) = r+l
     static member (*) (a, v:Vector) = Vector(v.x*a, v.y*a, v.z*a)
     static member (*) (v:Vector, a) = Vector(v.x*a, v.y*a, v.z*a)
 
+[<Struct>]
 type Indexer(i1:int, i2:int, i3:int) =
-    new() = Indexer(0, 0, 0)
     override this.ToString() =
         sprintf "(%A, %A, %A)" i1 i2 i3
 

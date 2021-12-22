@@ -40,3 +40,18 @@ type Light =
                     | PointLight point -> Color()
                 yield col
         |]
+
+    member this.Sample_Li(cam:Camera, pos:Point, nm:Vector) =
+        let col =
+            match this with
+            | AmbientLight ambient->
+                ambient.color.Uniform()
+            | DirectionLight direction ->
+                let dp = nm.Dot(direction.dir.Normalize)
+                if dp < 0 then
+                    let diffuse = direction.diffuse.Uniform()
+                    -dp * diffuse
+                else
+                    Color()
+            | PointLight point -> Color()
+        col

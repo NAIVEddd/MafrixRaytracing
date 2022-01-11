@@ -1,5 +1,7 @@
 ﻿open DrawWithTexture
 open DrawModelCar
+open RayTracing
+open RayTracing1
 
 // For more information see https://aka.ms/fsharp-console-apps
 //let model = LoadModel("C:\\allFiles\\Game\\LittleGraphicShow\\.vs\\Assets\\Renault12TL\\Renault12TL.obj")
@@ -9,4 +11,4 @@ open DrawModelCar
 //    let vec = Vec3b(byte 0, byte 0, byte 255)
 //    indexer[200, i] <- vec
 
-DrawCarWithTexture()
+DoRayTrace1()

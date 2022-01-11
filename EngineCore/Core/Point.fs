@@ -42,8 +42,11 @@ and [<Struct>] Vector(_x:double, _y:double, _z:double) =
     static member (+) (l:Vector, r:Vector) = Vector(l.x + r.x, l.y + r.y, l.z + r.z)
     static member (+) (l:Point, r:Vector) = Point(l.x+r.x, l.y+r.y, l.z+r.z)
     static member (+) (l:Vector, r:Point) = r+l
+    static member (-) (l:Vector, r:Vector) = Vector(l.x-r.x, l.y-r.y, l.z-r.z)
+    static member (~-)(l:Vector) = Vector(-l.x, -l.y, -l.z)
     static member (*) (a, v:Vector) = Vector(v.x*a, v.y*a, v.z*a)
     static member (*) (v:Vector, a) = Vector(v.x*a, v.y*a, v.z*a)
+    static member (/) (v:Vector, a) = Vector(v.x/a, v.y/a, v.z/a)
 
 [<Struct>]
 type Indexer(i1:int, i2:int, i3:int) =

@@ -12,3 +12,4 @@ type Color(_r:float, _g:float, _b:float, _a:float) =
     static member (*) (l:float, r:Color) = Color(l*r.r, l*r.g, l*r.b, min (l*r.a) 1.0)
     static member (*) (l:Color, r:float) = r*l
     static member (+) (l:Color, r:Color) = Color(l.r+r.r, l.g+r.g, l.b+r.b, min (l.a+r.a) 1.0)
+    static member (/) (l:Color, r:float) = Color(l.r/r, l.g/r, l.b/r, 1.0)

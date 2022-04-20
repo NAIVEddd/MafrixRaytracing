@@ -2,6 +2,10 @@
 open DrawModelCar
 open RayTracing
 open RayTracing1
+open RayTracing2
+open IFS_6_837
+open Assignment1_6_837
+open Assignment2_6_837
 
 // For more information see https://aka.ms/fsharp-console-apps
 //let model = LoadModel("C:\\allFiles\\Game\\LittleGraphicShow\\.vs\\Assets\\Renault12TL\\Renault12TL.obj")
@@ -11,4 +15,8 @@ open RayTracing1
 //    let vec = Vec3b(byte 0, byte 0, byte 255)
 //    indexer[200, i] <- vec
 
-DoRayTrace1()
+//DoRayTrace2()
+
+//IFS()
+//LoadScene()
+LoadScene_Assignment2()

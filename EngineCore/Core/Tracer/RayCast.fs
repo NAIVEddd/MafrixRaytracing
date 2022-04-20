@@ -10,24 +10,19 @@ type RayCast(world:IWorld) =
     member this.GetHit(ray, tmin,tmax) =
         world.GetObjects() |>
             Array.map(fun i -> i.Hit(ray,tmin,tmax)) |>
-            Array.minBy(fun (ishit, hitrecord) ->
-                (if ishit then hitrecord.t else tmax))
+            Array.minBy(fun (hitrecord) ->
+                (if hitrecord.bHit then hitrecord.t else tmax))
     override this.TraceRay(ray) = Color()
     override this.TraceRay(ray, depth) =
         let tmin, tmax = 0.000001, 10000000.0
-        let (_isHit, hitrecord) = world.Hit(ray, tmin, tmax)
+        let hitrecord = world.Hit(ray, tmin, tmax)
+        
         //let (_isHit, hitrecord) = this.GetHit(ray, tmin, tmax)
         if hitrecord.bHit then
             let n = hitrecord.normal.Normalize
             let targ = n
             let col = hitrecord.material.Value.Shade(hitrecord, world)
             col
-            //let (ishit, attenuation, scattered) = hitrecord.material.Value.Scatter(ray, hitrecord)
-            //if depth < maxDepth && ishit then
-            //    let c = this.TraceRay(scattered, depth + 1)
-            //    Color(c.r*attenuation.x, c.g*attenuation.y, c.b*attenuation.z)
-            //else
-            //    Color()
         else
             let unitDirection = ray.Direction().Normalize
             let t = 0.5 * (unitDirection.y + 1.0)

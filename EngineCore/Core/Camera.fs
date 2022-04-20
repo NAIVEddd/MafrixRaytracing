@@ -1,6 +1,7 @@
 ﻿module Engine.Core.Camera
 open System
 open Point
+open Ray
 open Transformation
 
 type UVN(dir:Vector, ?up:Vector) =
@@ -26,6 +27,11 @@ type UVN(dir:Vector, ?up:Vector) =
         let y = sin_phi
         let z = cos_phi * cos_theta
         UVN(Vector(x,y,z), defaultArg up (Vector(0,1,0)))
+
+    member this.U = u
+    member this.V = v
+    member this.N = n
+
     member this.RotateMatrix =
         Matrix4x4([|
             u.x; v.x; n.x; 0.0;
@@ -40,6 +46,14 @@ type Camera(pos:Point, dir:Vector, fov:double, nearClip:double, farClip:double, 
     let aspectRatio = double width / double height
     let viewplane = Point2D(2.0, 2.0/aspectRatio)
     let viewDistance = (0.5 * double width) * tan(fov * Math.PI / 360.0)
+    let mutable upperLeftCorner = Point()
+    let mutable horizontal = Vector()
+    let mutable verticle = Vector()
+
+    do
+        upperLeftCorner <- pos - 0.5 * (float width) * uvn.U - 0.5 * (float height) * uvn.V + viewDistance * uvn.N
+        horizontal <- (float width) * uvn.U
+        verticle <- (float height) * uvn.V
 
     member this.Position = camPosition
     member this.width = width
@@ -61,3 +75,11 @@ type Camera(pos:Point, dir:Vector, fov:double, nearClip:double, farClip:double, 
                     0; 0; 2.0/(farClip-nearClip); 0;
                     0; 0; 0; 1|]
         Matrix4x4(arr)
+    member this.GetRay(x:float, y:float) =
+        assert(x >= 0. && x < (float width + 1.))
+        assert(y >= 0. && y < (float height + 1.))
+        let xx = x / float width
+        let yy = y / float height
+        let target = upperLeftCorner + xx * horizontal + yy * verticle
+        let dir = (target-this.Position).Normalize
+        Ray(this.Position, dir)

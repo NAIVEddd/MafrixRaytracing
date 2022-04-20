@@ -10,15 +10,15 @@ type Whitted(world:IWorld, maxDepth) =
     member this.GetHit(ray, tmin,tmax) =
         world.GetObjects() |>
             Array.map(fun i -> i.Hit(ray,tmin,tmax)) |>
-            Array.minBy(fun (ishit, hitrecord) ->
-                (if ishit then hitrecord.t else tmax))
+            Array.minBy(fun hitrecord ->
+                (if hitrecord.bHit then hitrecord.t else tmax))
     override this.TraceRay(ray) = Color()
     override this.TraceRay(ray, depth) =
         let tmin, tmax = 0.000001, 10000000.0
-        let (isHit, hitrecord) = world.Hit(ray, tmin, tmax)
+        let hitrecord = world.Hit(ray, tmin, tmax)
         //let (_isHit, hitrecord) = this.GetHit(ray, tmin, tmax)
         //let (ishit, hitrecord) = ListHit(hitable, ray, 0, 10000000)
-        if isHit && depth < maxDepth then
+        if hitrecord.bHit && depth < maxDepth then
             let n = hitrecord.normal.Normalize
             let targ = n// + GetRandomInUnitSphere()
             hitrecord.material.Value.Shade(hitrecord,world,depth, ref targ)

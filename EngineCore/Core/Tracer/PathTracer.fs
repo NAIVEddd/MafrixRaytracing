@@ -10,15 +10,13 @@ type PathTracer(world:IWorld, maxDepth) =
     member this.GetHit(ray, tmin,tmax) =
         world.GetObjects() |>
             Array.map(fun i -> i.Hit(ray,tmin,tmax)) |>
-            Array.minBy(fun (ishit, hitrecord) ->
-                (if ishit then hitrecord.t else tmax))
+            Array.minBy(fun hitrecord ->
+                (if hitrecord.bHit then hitrecord.t else tmax))
     override this.TraceRay(ray) = Color()
     override this.TraceRay(ray, depth) =
         let tmin, tmax = 0.000001, 10000000.0
-        let (isHit, hitrecord) = world.Hit(ray, tmin, tmax)
-        //let (_isHit, hitrecord) = this.GetHit(ray, tmin, tmax)
-        //let (ishit, hitrecord) = ListHit(hitable, ray, 0, 10000000)
-        if isHit && depth < maxDepth then
+        let hitrecord = world.Hit(ray, tmin, tmax)
+        if hitrecord.bHit && depth < maxDepth then
             let n = hitrecord.normal.Normalize
             let targ = n// + GetRandomInUnitSphere()
             hitrecord.material.Value.PathShade(hitrecord,world,depth)
@@ -26,4 +24,4 @@ type PathTracer(world:IWorld, maxDepth) =
             let unitDirection = ray.Direction().Normalize
             let t = 0.5 * (unitDirection.y + 1.0)
             let vec = (1.0-t)*Vector(1,1,1) + t*Vector(0.5,0.7,1.0)
-            Color(vec.x, vec.y, vec.z)
+            Color()

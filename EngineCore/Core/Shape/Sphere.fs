@@ -13,10 +13,14 @@ type Sphere =
         member this.ShadowHit(ray:Ray) = (this:>IHitable).ShadowHit(ray)
         member this.Hit(r:Ray, tMin:float, tMax:float) = (this:>IHitable).Hit(r,tMin,tMax)
         interface IHitable with
+            member this.BoundBox(t0:float,t1:float) =
+                let pmin = Vector(this.center.x,this.center.y,this.center.z)-Vector(this.radius,this.radius,this.radius)
+                let pmax = Vector(this.center.x,this.center.y,this.center.z)+Vector(this.radius,this.radius,this.radius)
+                true, AABB(pmin,pmax)
             member this.ShadowHit(ray:Ray) =
-                let bHit, record = this.Hit(ray, 0.00001, 99999999.)
-                if bHit then
-                    bHit, record.t
+                let record = this.Hit(ray, 0.00001, 99999999.)
+                if record.bHit then
+                    true, record.t
                 else
                     false, 0.0
             member this.Hit(r:Ray, tMin:float, tMax:float) =
@@ -29,14 +33,14 @@ type Sphere =
                     let tmp = (-b - sqrt(discriminant))/(2.0*a)
                     if tmp < tMax && tmp > tMin then
                         let p = r.PointAtParameter(tmp)
-                        (true, HitRecord(true, tmp, p, (p-this.center)/this.radius, r, Some this.material))
+                        HitRecord(true, tmp, p, (p-this.center)/this.radius, r, Some this.material)
                     else
                         let tmp = (-b + sqrt(discriminant))/(2.0*a)
                         if tmp < tMax && tmp > tMin then
                             let p = r.PointAtParameter(tmp)
-                            (true, HitRecord(true, tmp, p, (p-this.center)/this.radius, r, Some this.material))
+                            HitRecord(true, tmp, p, (p-this.center)/this.radius, r, Some this.material)
                         else
-                            (false, HitRecord.Nothing)
+                            HitRecord.Nothing
                 else
-                    (false, HitRecord.Nothing)
+                    HitRecord.Nothing
     end

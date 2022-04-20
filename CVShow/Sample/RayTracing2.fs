@@ -1,4 +1,4 @@
-﻿module RayTracing1
+﻿module RayTracing2
 
 open System.IO
 open OpenCvSharp
@@ -14,11 +14,16 @@ open Engine.Core.Ray
 open Engine.Model.Obj
 open Engine.Core.Shapes.Sphere
 open Engine.Core.Shapes.Trangle
+open Engine.Core.Shapes.Rect
+open Engine.Core.Shapes.Box
 open Engine.Core.Shapes.CircleAreaLightObject
 open Engine.Core.Samplers.JitteredSampler
 open Engine.Core.Materials.Lambertian
 open Engine.Core.Materials.GlossySpecular
 open Engine.Core.Materials.PerfectSpecular
+
+open Engine.Core.Accels.BvhNode
+open Engine.Core.World
 
 open Engine.Core.Interfaces.HitRecord
 open Engine.Core.Interfaces.IBrdf
@@ -36,6 +41,8 @@ open Engine.Core.Lights.Ambient
 open Engine.Core.Lights.PointLight
 open Engine.Core.Lights.Directional
 open Engine.Core.Lights.AreaLight
+
+open System
 
 let ListHit(items:IHitable[], r:Ray, tmin:float, tmax:float) =
     items |> Array.map(fun i -> i.Hit(r,tmin,tmax)) |> Array.minBy(fun hitrecord -> (
@@ -104,29 +111,6 @@ type Dielectric(ri:float) =
         member this.Shade(hit, w) = Color()
         member this.PathShade(hit, w, depth) = Color()
 
-type World(_items:IHitable[], amb:ILight, _lights:ILight[]) =
-    let mutable items = _items
-    let mutable lights = _lights
-    let mutable tracer = Unchecked.defaultof<ITracer>
-    interface IWorld with
-        member this.BoundBox(t0:float,t1:float) = true, AABB(Vector(), Vector())
-        member this.ShadowHit(ray:Ray) =
-            let record = (this:IHitable).Hit(ray, 0.00001, 99999999.0)
-            if record.bHit then
-                true, record.t
-            else
-                false, 0.0
-        member this.Hit(r:Ray, tMin:float, tMax:float) =
-            items |> Array.map(fun i -> i.Hit(r,tMin,tMax)) |> Array.minBy(fun hitrecord -> (
-                if hitrecord.bHit then hitrecord.t else tMax))
-        member this.GetAmbientLight() = amb
-        member this.GetLights() = lights
-        member this.AddLight(light) = lights <- Array.append lights [|light|]
-        member this.GetObjects() = items
-        member this.AddObject(obj) = items <- Array.append items [|obj|]
-        member this.Build() = ()
-        member this.SetTracer(t) = tracer <- t
-        member this.GetTracer() = tracer
 
 type Matte(ka:float, kd:float, color:Color) =
     let ambient_brdf = new Lambertian1(ka, color)
@@ -145,6 +129,27 @@ type Matte(ka:float, kd:float, color:Color) =
             let reflected = Ray(hit.p, wi)
             let t = world.GetTracer().TraceRay(reflected, depth+1)
             f * t * ndotwi / pdf
+            //let rand = System.Random.Shared
+            //if rand.NextDouble() < 1. then
+            //    let t = world.GetTracer().TraceRay(reflected, depth+1)
+            //    f * t * ndotwi / pdf
+            //else
+            //    let on_light = Point(213. + rand.NextDouble() * (343.-213.), 554, 227. + rand.NextDouble() * (332.-227.))
+            //    let to_light = on_light - hit.p
+            //    let distance_squared = to_light.LengthSquare
+            //    let unit_to_light = to_light.Normalize
+            //    if unit_to_light.Dot(hit.normal) < 0. then
+            //        Color()
+            //    else
+            //        let light_area = (343.-213.)*(332.-227.)
+            //        let light_cosine = System.Math.Abs(unit_to_light.y)
+            //        if light_cosine < 0.00001 then
+            //            Color()
+            //        else
+            //            pdf <- distance_squared / (light_cosine * light_area)
+            //            let scattered = Ray(hit.p, unit_to_light)
+            //            let t = world.GetTracer().TraceRay(scattered, depth+1)
+            //            f * t / pdf
         member this.Shade(hit, w:obj) =
             let world = w:?>IWorld
             let wo = - hit.hitRay.Direction()
@@ -191,44 +196,18 @@ type Phong(ka:float, kd:float, ks:float, spec:float, color:Color) =
                         l <- l + (diffuse_brdf.f(hit, wi, wo) + specular_brdf.f(hit, wi, wo)) * light.L(hit) * ndotwi
             l
 
-type PhongArea(ka:float, kd:float, ks:float, spec:float, color:Color) =
-    let ambient_brdf = new Lambertian1(ka, color)
-    let diffuse_brdf = new Lambertian1(kd, color)
-    let specular_brdf = new GlossySpecular(ks, spec, color)
-    member this.Scatter(ray:Ray, hit:HitRecord) = (this:>IMaterial).Scatter(ray,hit)
-    interface IMaterial with
-        member this.Scatter(ray:Ray, hit:HitRecord) =
-            false,Vector(),Ray()
-        member this.Shade(hit,w,depth,wo) = (this:>IMaterial).Shade(hit,w)
-        member this.PathShade(hit, w, depth) = Color()
-        member this.Shade(hit, w:obj) =
-            let world = w:?>IWorld
-            let wo = - hit.hitRay.Direction()
-            let mutable l = Color()
-            for light in (world.GetLights()) do
-                for _ in [0..63] do
-                    let wi = light.GetDirection(hit)
-                    let ndotwi = hit.normal.Dot(wi)
-                    if ndotwi > 0.0 then
-                        let in_shadow =
-                            if light.CastsShadows() then
-                                let shadowray = Ray(hit.p,wi)
-                                light.InShadow(hit, shadowray, world)
-                            else
-                                false
-                        if not in_shadow then
-                            l <- l + (diffuse_brdf.f(hit, wi, wo) + specular_brdf.f(hit, wi, wo)) * light.L(hit) * ndotwi
-                l <- l / 64.0
-            l <- l + ambient_brdf.rho(wo, 1,1) * world.GetAmbientLight().L(hit)
-            l
-
 type Emissive(ls:float, normal:Vector, color:Color) =
     member this.Scatter(ray:Ray, hit:HitRecord) = (this:>IMaterial).Scatter(ray,hit)
     interface IMaterial with
         member this.Scatter(ray:Ray, hit:HitRecord) =
             false,Vector(),Ray()
         member this.Shade(hit,w,depth,wo) = (this:>IMaterial).Shade(hit,w)
-        member this.PathShade(hit, w, depth) = Color()
+        member this.PathShade(hit, w, depth) =
+            let dot = (-hit.normal).Dot(hit.hitRay.Direction())
+            if dot >= 0.0 then
+                ls * color
+            else
+                Color()
         member this.Shade(hit, w:obj) =
             let dot = (-hit.normal).Dot(hit.hitRay.Direction())
             if dot >= 0.0 then
@@ -245,7 +224,7 @@ type Reflective(a:Vector, ls:float, color:Color, tracer:ITracer) =
         member this.Scatter(ray:Ray, hit:HitRecord) =
             let mutable wi = Vector()
             let mutable pdf = 0.0
-            let col = reflective_brdf.Sample_f(hit, ref wi, -ray.Direction(), 0,0,ref pdf)
+            let col = reflective_brdf.Sample_f(hit, &wi, -ray.Direction(), 0,0,&pdf)
             let reflected = Reflect(-ray.Direction(), hit.normal)
             let scattered = Ray(hit.p, wi)// + GetRandomInUnitSphere())
             scattered.Direction().Dot(hit.normal) > 0, Vector(col.r,col.g,col.b), scattered
@@ -263,120 +242,172 @@ type Reflective(a:Vector, ls:float, color:Color, tracer:ITracer) =
         member this.Shade(hit,w,depth,wo) =
             wo <- Reflect(-hit.hitRay.Direction(), hit.normal)
             let mutable wi = Vector()
-            let pdf = 0.0
-            let col = reflective_brdf.Sample_f(hit, &wi, -hit.hitRay.Direction(), 0,0,ref pdf)
+            let mutable pdf = 0.0
+            let col = reflective_brdf.Sample_f(hit, &wi, -hit.hitRay.Direction(), 0,0,&pdf)
             let scattered = Ray(hit.p, wi)// + GetRandomInUnitSphere())
-            0.5 * phong.Shade(hit,w) + 0.5 * col * hit.normal.Dot(wi) * tracer.TraceRay(scattered, depth+1)
+            0.2 * phong.Shade(hit,w) + 0.8 * col * hit.normal.Dot(wi) * tracer.TraceRay(scattered, depth+1)
         member this.Shade(hit, w:obj) =
             tracer.TraceRay(hit.hitRay, 0)
 
-type RayTraceCamera() =
-    let mutable origin = Point()
-    let mutable lowerLeftCorner = Vector(-2,-1,-1)
-    let mutable horizontal = Vector(4,0,0)
-    let mutable vertical = Vector(0.0, 2.0, 0.0)
-    
-    member this.GetRay(u:float, v:float) = Ray(origin, (lowerLeftCorner + u*horizontal + v*vertical).Normalize)
+let GetCornellBox() : IHitable[] =
+    let red = Matte(1., 1., Color(0.65, 0.05, 0.05))
+    let white = Matte(1., 1., Color(0.73, 0.73, 0.73))
+    let green = Matte(1., 1., Color(0.12, 0.45, 0.15))
+    let light = Emissive(15., Vector(0, -1, 0), Color(1,1,1))
+    let r1 = flip_normals(yz_rect(0, 555, 0, 555, 555, green))
+    let r2 = yz_rect(0, 555, 0, 555, 0, red)
+    let r3 = flip_normals(xz_rect(213, 343, 227, 323, 554, light))
+    let r4 = xz_rect(0, 555, 0, 555, 0, white)
+    let r5 = flip_normals(xy_rect(0, 555, 0, 555, 555, white))
+    let r6 = flip_normals(xz_rect(0, 555, 0, 555, 555, white))
+    let b1 = Translate(Rotate_y(Box(Vector(0, 0, 0), Vector(165, 165, 165), white), -18), Vector(130, 0, 65))
+    let b2 = Translate(Rotate_y(Box(Vector(0, 0, 0), Vector(165, 330, 165), white), 15), Vector(265, 0, 295))
+    [|r1;r2;r3;r4;r5;r6;b1;b2|]
 
 
-let rec GetColor(ray:Ray, hitable:IHitable[], depth:int) =
-    let hitrecord = ListHit(hitable, ray, 0, 10000000)
-    if hitrecord.bHit then
-        let n = hitrecord.normal.Normalize
-        let targ = n + GetRandomInUnitSphere()
-        let (ishit, attenuation, scattered) = hitrecord.material.Value.Scatter(ray, hitrecord)
-        if depth < 25 && ishit then
-            let c = GetColor(scattered, hitable, depth + 1)
-            Color(c.r*attenuation.x, c.g*attenuation.y, c.b*attenuation.z)
-        else
-            Color()
-    else
-        let unitDirection = ray.Direction().Normalize
-        let t = 0.5 * (unitDirection.y + 1.0)
-        let vec = (1.0-t)*Vector(1,1,1) + t*Vector(0.5,0.7,1.0)
-        Color(vec.x, vec.y, vec.z)
+let ThreadCount = 8
+let DrawScreenByChunk(cam:Camera, tracer:Tracer, screen:Screen, arr:(int*int) array, chunkPerThread:int, samplePerPixel:int) =
+    let rand = new System.Random()
+    let swap x y (a: 'a []) =
+        let tmp = a.[x]
+        a.[x] <- a.[y]
+        a.[y] <- tmp
 
+    let ns = samplePerPixel
+    let ny = cam.height
+    //arr |> Array.iteri (fun i _ -> arr |> swap i (rand.Next(i, Array.length arr)))
+    arr |> Array.chunkBySize chunkPerThread |>
+        Array.map(fun pixels ->
+            async{
+                let samp = JitteredSampler(ns)
+                samp.GenerateSamples()
+                let colors = pixels |> Array.map(fun (i,j) -> 
+                    let mutable col = Color()
+                    for s = 0 to ns-1 do
+                        let sp = samp.SampleUnitSquare()
+                        //let u = (float i + sp.x) / float nx
+                        //let v = (float j + sp.y) / float ny
+                        let u = float i + sp.x
+                        let v = float j + sp.y
+                        let ray = cam.GetRay(u, v)
+                        //let ray = cam.GetRay(u,v)
+                        let c = tracer.TraceRay(ray, 0)
+                        //let c = GetColor(ray, hitableList, 0)
+                        col <- col + c
+                    col <- col / float ns
+                    col <- Color(sqrt(col.r), sqrt(col.g), sqrt(col.b))
+                    let ir = int (255.99*col.r)
+                    let ig = int (255.99*col.g)
+                    let ib = int (255.99*col.b)
+                    Color(ir,ig,ib), 1.
+                )
+                pixels |> Array.iteri (fun idx (i,j) -> screen[i,(ny-1)-j] <- colors[idx])
+            })
+        |> function(l) -> l,ThreadCount// 16 thread
+        |> Async.Parallel
+        |> Async.Ignore
+        |> Async.RunSynchronously
 
-let DoRayTrace1() =
-    let nx = 400
-    let ny = 200
-    let ns = 9
+let DrawScreenByPixel(cam:Camera, tracer:Tracer, screen:Screen, arr:(int*int) array, samplePerPixel:int) =
+    let ns = samplePerPixel
+    let ny = cam.height
     let samp = JitteredSampler(ns)
     samp.GenerateSamples()
-    let cam = new RayTraceCamera()
+    //arr |> Array.iteri (fun i _ -> arr |> swap i (rand.Next(i, Array.length arr)))
+    arr |> Array.map(fun (i,j) -> 
+        async{
+            let mutable col = Color()
+            for s = 0 to ns-1 do
+                let sp = samp.SampleUnitSquare()
+                //let u = (float i + sp.x) / float nx
+                //let v = (float j + sp.y) / float ny
+                let u = float i + sp.x
+                let v = float j + sp.y
+                let ray = cam.GetRay(u, v)
+                //let ray = cam.GetRay(u,v)
+                let c = tracer.TraceRay(ray, 0)
+                //let c = GetColor(ray, hitableList, 0)
+                col <- col + c
+            col <- col / float ns
+            col <- Color(sqrt(col.r), sqrt(col.g), sqrt(col.b))
+            let ir = int (255.99*col.r)
+            let ig = int (255.99*col.g)
+            let ib = int (255.99*col.b)
+            screen[i,(ny-1)-j] <- Color(ir,ig,ib), 1})
+        |> function(l) -> l,ThreadCount// 16 thread
+        |> Async.Parallel
+        |> Async.Ignore
+        |> Async.RunSynchronously
 
-    let vertRef = VertexsRef([|Point(-1,0,-1);Point(-1,1,-1);Point(1,1,-1)|],[|Vector();Vector();Vector()|],
-        [|Point2D();Point2D();Point2D()|])
-    let trang = Trangle(vertRef, Indexer(0,1,2), Indexer(0,1,2), Indexer(0,1,2),Dielectric(1.5))
 
-    //let hitableList = [|Sphere(Point(0, 0, -1), 0.5, Lambertian(Vector(0.8,0.3,0.3))):>IHitable;
-    //                    Sphere(Point(0,-100.5,-1), 100, Lambertian(Vector(0.8,0.8,0.0)))
-    //                    Sphere(Point(-1,0,-1), 0.5, Dielectric(1.5))
-    //                    Sphere(Point(1,0,-1), 0.5, Matte(0.25,0.75,Color(0.8,0.6,0.2)))|]
-                        //Sphere(Point(1,0,-1), 0.5, Metal(Vector(0.8,0.6,0.2), 0.3))|]
-    let hitableList:IHitable[] = [|Sphere(Point(0,0,-1), 0.5, PhongArea(0.15,0.65,0.2,10,Color(0.8,0.6,0.2)))
-                                   Sphere(Point(0,-100.5,-1), 100, PhongArea(0.15,0.65,0.2,10,Color(0.8,0.8,0.0)))
-        |]
-    let lights = [|PointLight(3,Color(1,1,1),Point(10,10,5)):>ILight
-                   //PointLight(1,Color(1,1,1),Point(-10,10,0))
-        |]
+
+let DoRayTrace2() =
+    let ChunkPerThread = 256
+    let nx = 300
+    let ny = 300
+    let ns = 256
+
     
     let ambientlight = Ambient()
     let world = World([||], ambientlight, [||]) :> IWorld
-    let alObj = CircleAreaLightObject(Point(0,2.5,-5), 3, Vector(0,0,1),Emissive(0.98,Vector(0,0,1),Color(1,1,1)))
-    //world.AddObject(alObj)
-    //world.AddLight(AreaLight(0.95,3,Color(1,1,1), Point(0,2.5,-5),Vector(0,0,1),alObj,world))
-    
-    let tracer = RayCast(world)
-    //world.AddObject(trang)
-    world.SetTracer(tracer)
-    let refle = Reflective(Vector(0.8,0.6,0.2),0.5,Color(0.8,0.6,0.2),Whitted(world,5))
-    world.AddObject(Sphere(Point(1,0,-1), 0.5, refle))
-    world.AddLight(PointLight(3,Color(1,1,1),Point(10,10,5)))
-    //world.AddLight(PointLight(1,Color(1,1,1),Point(-10,10,0)))
-    //world.AddObject(Sphere(Point(0,0,-1), 0.5, PhongArea(0.15,0.65,0.2,10,Color(0.8,0.6,0.2))))
-    //world.AddObject(Sphere(Point(0,-100.5,-1), 100, PhongArea(0.15,0.65,0.2,10,Color(0.8,0.8,0.0))))
 
-    // path trace
-    //let tracer = PathTracer(world,5)
-    //world.SetTracer(tracer)
+    let tracer = PathTracer(world, 15)
+    world.SetTracer(tracer)
+    let refle = Reflective(Vector(0.8,0.6,0.2),0.5,Color(0.8,0.6,0.2),tracer)
+    //world.AddObject(Sphere(Point(1,0,-1), 0.5, refle))
+    for o in GetCornellBox() do
+        world.AddObject(o)
+
     let obj1 = Sphere(Point(0,0,-1), 0.5, Matte(0.25,0.75,Color(0.8,0.6,0.2)))
-    world.AddObject(obj1)
-    //let obj2 = Sphere(Point(0,-100.5,-1), 100, Matte(0.25,0.75,Color(0.8,0.8,0)))
-    //world.AddObject(obj2)
+    let obj3 = Sphere(Point(0,0,-1), 0.5, refle)
+    world.Build()
+
+    let cam = new Camera(Point(278, 278, -500),Vector(0,0,1), 120.0, 0.5, 1000.0, nx, ny)
 
     let screen = new Screen(nx, ny)
     let mat = new Mat(Size(nx, ny), MatType.CV_8UC3)
     let indexer = mat.GetGenericIndexer<Vec3b>()
     let (w,h) = screen.Size()
     let arr = Array.allPairs [|0..w-1|] [|0..h-1|]
-    arr |> Array.map(fun (i,j) -> 
-            async{
-                let mutable col = Color()
-                for s = 0 to ns-1 do
-                    let sp = samp.SampleUnitSquare()
-                    let u = (float i + sp.x) / float nx
-                    let v = (float j + sp.y) / float ny
-                    let ray = cam.GetRay(u,v)
-                    let c = tracer.TraceRay(ray, 0)
-                    //let c = GetColor(ray, hitableList, 0)
-                    col <- col + c
-                col <- col / float ns
-                col <- Color(sqrt(col.r), sqrt(col.g), sqrt(col.b))
-                let ir = int (255.99*col.r)
-                let ig = int (255.99*col.g)
-                let ib = int (255.99*col.b)
-                screen[i,(ny-1)-j] <- Color(ir,ig,ib), 1
-            })
-        |> Async.Parallel
-        |> Async.Ignore
-        |> Async.RunSynchronously
+    let RenderWithContinus() =
+        let mutable nsCount = 0.
+        let mutable key = 0
+        while key <> int 'q' do
+            let tmpScreen = new Screen(nx, ny)
+    
+        // random shuffer pixels
+        //arr |> Array.iteri (fun i _ -> arr |> swap i (rand.Next(i, Array.length arr)))
+            DrawScreenByChunk(cam, tracer, tmpScreen, arr, ChunkPerThread, 1)
+        //DrawScreenByPixel(cam, tracer, screen, arr, ns)
+            nsCount <- nsCount + 1.
+            arr |> Array.iter(fun(x,y) ->
+                let oneC = tmpScreen.Pixel(x,y)
+                let oldC = screen.Pixel(x,y)
+                let newC = (oneC + oldC) / 2.
+                screen[x,y] <- newC, 1.
+                let c = newC
+                let vec = Vec3b(byte c.b, byte c.g, byte c.r)
+                indexer[y,x] <- vec)
+            Cv2.ImShow("Manga", mat)
+            key <- Cv2.WaitKey(1)
 
-
-    arr |> Array.map(fun(x,y) ->
-        let c = screen.Pixel(x,y)
-        let vec = Vec3b(byte c.b, byte c.g, byte c.r)
-        indexer[y,x] <- vec) |> ignore
+    let RenderWithSingleFrame() =
+        //random shuffer pixels
+        let rand = new System.Random()
+        let swap x y (a: 'a []) =
+            let tmp = a.[x]
+            a.[x] <- a.[y]
+            a.[y] <- tmp
+        arr |> Array.iteri (fun i _ -> arr |> swap i (rand.Next(i, Array.length arr)))
+        DrawScreenByChunk(cam, tracer, screen, arr, ChunkPerThread, ns)
+        //DrawScreenByPixel(cam, tracer, screen, arr, ns)
+        arr |> Array.iter(fun(x,y) ->
+            let c = screen.Pixel(x,y)
+            let vec = Vec3b(byte c.b, byte c.g, byte c.r)
+            indexer[y,x] <- vec)
             
-    Cv2.ImShow("Manga", mat)
-    Cv2.WaitKey() |> ignore
+        Cv2.ImShow("Manga", mat)
+        Cv2.WaitKey() |> ignore
+
+    //RenderWithContinus()
+    RenderWithSingleFrame()

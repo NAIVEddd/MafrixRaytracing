@@ -150,7 +150,7 @@ let DrawWireframeToScreen (screen:Mat) (color:Scalar) (cam:Camera) (pos:Point) (
 let DrawCar() =
     let car = LoadModel("../../../../3DModel/Renault12TL/Renault12TL.obj")
 
-    let trans = Matrix4x4.MakeScaleMatrix(5,5,5) * Matrix4x4.MakeRotateMatrix(0,0,60)
+    let trans = Matrix4x4.MakeScaleMatrix(5,5,5) * Matrix4x4.MakeRotationMatrix(0,0,60)
 
     let cam = new Camera(Point(2,9,-20),Vector(0, 0, 1), 90.0, 0.5, 1000.0, 1024, 768)
     let vs = car.Vertexs |> Array.map (fun v -> v*trans)

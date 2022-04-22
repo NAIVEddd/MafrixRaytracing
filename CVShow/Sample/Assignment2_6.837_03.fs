@@ -11,7 +11,8 @@ open Engine.Core.RenderTarget
 open Engine.Core.Pipeline
 open Engine.Core.Transformation
 open Engine.Core.Texture
-open Engine.Model.Obj
+open Assignment_6_837.Obj
+//open Engine.Model.Obj
 open FParsec
 
 
@@ -40,6 +41,20 @@ let keyword_Angle : Parser<_, unit> = pstring "angle"
 let keyword_Plane : Parser<_, unit> = pstring "Plane"
 let keyword_Normal : Parser<_, unit> = pstring "normal"
 let keyword_Offset : Parser<_, unit> = pstring "offset"
+let keyword_Triangle : Parser<_, unit> = pstring "Triangle"
+let keyword_Vertex0 : Parser<_, unit> = pstring "vertex0"
+let keyword_Vertex1 : Parser<_, unit> = pstring "vertex1"
+let keyword_Vertex2 : Parser<_, unit> = pstring "vertex2"
+let keyword_TriangleMesh : Parser<_, unit> = pstring "TriangleMesh"
+let keyword_Objfile : Parser<_, unit> = pstring "obj_file"
+let keyword_Transform : Parser<_, unit> = pstring "Transform"
+let keyword_UniformScale : Parser<_, unit> = pstring "UniformScale"
+let keyword_Translate : Parser<_, unit> = pstring "Translate"
+let keyword_Scale : Parser<_, unit> = pstring "Scale"
+let keyword_XRotate : Parser<_, unit> = pstring "XRotate"
+let keyword_YRotate : Parser<_, unit> = pstring "YRotate"
+let keyword_ZRotate : Parser<_, unit> = pstring "ZRotate"
+let keyword_Rotate : Parser<_, unit> = pstring "Rotate"
 let pfloat3 = many (spaces >>. pfloat .>> spaces)
 let toColor (f3:float list) =
     assert(f3.Length = 3)
@@ -209,7 +224,7 @@ type Triangle =
         new(_v0:Point, _v1:Point, _v2:Point, mat) =
             let e1 = _v1 - _v0
             let e2 = _v2 - _v0
-            let nm = e2.Cross(e1).Normalize
+            let nm = e1.Cross(e2).Normalize
             {
                 v0 = _v0; v1 =_v1; v2 = _v2;
                 normal = nm; material = mat;
@@ -219,10 +234,10 @@ type Triangle =
             let v1 = this.v1
             let v2 = this.v2
             let e1 = v1-v0
-            let e2 = v2-v1
+            let e2 = v2-v0
             let s1 = ray.Direction().Cross(e2)
             let divisor = s1.Dot(e1)
-            if divisor = 0. then
+            if divisor < 1e-6 then
                 false, 0.,0.,0.
             else
                 let invDivisor = 1./divisor
@@ -233,28 +248,81 @@ type Triangle =
                 else
                     let s2 = d.Cross(e1)
                     let b2 = ray.Direction().Dot(s2) * invDivisor
-                    if b2 < 0. || b2 > 1. then
+                    if b2 < 0. || b1 + b2 > 1. then
                         false, 0., 0., 0.
                     else
                         let t = e2.Dot(s2) * invDivisor
-                        if t < 0.00001 then
-                            false, 0.,0.,0.
-                        else
-                            let b0 = 1. - b1 - b2
-                            if b0 < 0. || b0 > 1. then
-                                false, 0., 0., 0.
-                            else
-                                true, t, b1, b2
+                        true, t, b1, b2
         member this.Intersect(r:Ray, tMin:float, tMax:float) =
             let bHit, t, beta, gamma = this.PreCalcu(r)
-            if bHit then
-                    let p = r.PointAtParameter(t)
-                    let alpha = 1. - beta - gamma
-                    assert(alpha >= 0. && alpha <= 1.)
-                    Hit(t, r, this.material, p, this.normal)
-                    //HitRecord(true, t, p, normal, r, Some this.material)
-                else
-                    Hit()
+            if bHit && t > tMin then
+                let p = r.PointAtParameter(t)
+                let alpha = 1. - beta - gamma
+                assert(alpha >= 0. && alpha <= 1.)
+                Hit(t, r, this.material, p, this.normal)
+                //HitRecord(true, t, p, normal, r, Some this.material)
+            else
+                Hit()
+        interface IObject3D with
+            member this.Intersect(r:Ray, tMin:float, tMax:float) = this.Intersect(r,tMin,tMax)
+    end
+
+type TriangleMesh =
+    struct
+        val faces : Triangle array
+        new(init:ObjIncludeInfo, material:int) =
+            let idxs = init.Faces |> Array.map (fun (idx,_,_) -> idx)
+            let arr = idxs |> Array.map (fun idx ->
+                                Triangle(init.Vertexs[idx.i],init.Vertexs[idx.j],
+                                         init.Vertexs[idx.k],material))
+            {
+                faces = arr;
+            }
+        member this.Intersect(r:Ray, tMin:float, tMax:float) =
+            this.faces |> Array.map (fun f -> f.Intersect(r,tMin,tMax)) |>
+                Array.minBy (fun hit -> if hit.hit then hit.t else tMax)
+        interface IObject3D with
+            member this.Intersect(r:Ray, tMin:float, tMax:float) = this.Intersect(r,tMin,tMax)
+    end
+
+type Transform =
+    struct
+        val mats : Matrix4x4
+        val invMats : Matrix4x4
+        val normalMats : Matrix4x4
+        val transformed : IObject3D
+        val material : int
+        new(matr:Matrix4x4, invMatr:Matrix4x4, obj:IObject3D, mate:int) =
+            {
+                mats=matr;
+                invMats=invMatr;
+                normalMats=invMatr.Transpose();
+                transformed=obj;
+                material=mate;
+            }
+        member this.Intersect(r:Ray, tMin:float, tMax:float) =
+            let newRay = Ray(r.Origin() * this.invMats, (r.Direction() * this.invMats).Normalize)
+            let hit = this.transformed.Intersect(newRay, tMin, tMax)
+            if hit.hit then
+                let hitPoint = hit.point*this.mats
+                let hitNormal = (hit.normal*this.normalMats).Normalize
+                let len = (hitPoint - r.Origin()).Length
+                Hit(len,r,hit.material,hitPoint, hitNormal)
+            else
+                hit
+        interface IObject3D with
+            member this.Intersect(r:Ray, tMin:float, tMax:float) = this.Intersect(r,tMin,tMax)
+    end
+
+type Group =
+    struct
+        val objects : IObject3D list
+        new(l) = {objects = l;}
+        member this.Intersect(r:Ray, tMin:float, tMax:float) =
+            this.objects |> List.map(fun o -> o.Intersect(r,tMin,tMax)) |>
+                List.minBy (fun h -> if h.hit then h.t else tMax)
+        interface IObject3D with
+            member this.Intersect(r:Ray, tMin:float, tMax:float) = this.Intersect(r,tMin,tMax)
     end
 
 type DirectionalLight =
@@ -339,17 +407,81 @@ let toScene ((((cam,l),c),mats),objs) =
     Scene(cam,l,c,mats,objs)
 
 
+type TransformAst =
+    | UniformScale_node of float
+    | Scale_node of Vector
+    | Translate_node of Vector
+    | XRotate_node of float
+    | YRotate_node of float
+    | ZRotate_node of float
+    | Rotate_node of Vector
 type ObjectAST =
     | Sphere_node of Point * float
     | Plane_node of Vector * float
+    | Triangle_node of (Point * Point) * Point
+    | TrianbleMesh_node of string
+    | Transform_node of TransformAst list * ObjectAST
+    | Objects_node of int * (ObjectAST list)
+    | Group_node of ObjectAST list
 
-let toObject(obj:ObjectAST, material:int) : IObject3D =
+let rec toObject(obj:ObjectAST, material:int) : IObject3D =
     match obj with
     | Sphere_node (p,r) -> Sphere(p,r,material)
     | Plane_node (nm, off) -> Plane(nm, off, material)
-let toObjects(mat:int, objs: ObjectAST list) : IObject3D list =
-    List.map (fun obj -> toObject(obj, mat)) objs
+    | Triangle_node ((v0,v1),v2) -> Triangle(v0,v1,v2,material)
+    | TrianbleMesh_node filename ->
+        let info = LoadModel(filename)
+        TriangleMesh(info,material)
+    | Transform_node (l,ast) ->
+        let mats =
+            l |> List.map(fun node ->
+                            match node with
+                            | UniformScale_node s -> Matrix4x4.MakeScaleMatrix(s,s,s)
+                            | Scale_node s -> Matrix4x4.MakeScaleMatrix(s.x,s.y,s.z)
+                            | Translate_node t -> Matrix4x4.MakeDisplacementMatrix(t.x,t.y,t.z)
+                            | XRotate_node ang -> Matrix4x4.MakeRotationXMatrix(ang)
+                            | YRotate_node ang -> Matrix4x4.MakeRotationYMatrix(ang)
+                            | ZRotate_node ang -> Matrix4x4.MakeRotationZMatrix(ang)
+                            | Rotate_node ang -> Matrix4x4.MakeRotationMatrix(ang.x,ang.y,ang.z))
+            |> List.rev
+            |> List.reduce (fun l r -> l * r)
+        let invMats =
+            l |> List.map(fun node ->
+                            match node with
+                            | UniformScale_node s -> Matrix4x4.MakeScaleInvMatrix(s,s,s)
+                            | Scale_node s -> Matrix4x4.MakeScaleInvMatrix(s.x,s.y,s.z)
+                            | Translate_node t -> Matrix4x4.MakeDisplacementInvMatrix(t.x,t.y,t.z)
+                            | XRotate_node ang -> Matrix4x4.MakeRotationXInvMatrix(ang)
+                            | YRotate_node ang -> Matrix4x4.MakeRotationYInvMatrix(ang)
+                            | ZRotate_node ang -> Matrix4x4.MakeRotationZInvMatrix(ang)
+                            | Rotate_node ang -> Matrix4x4.MakeRotationInvMatrix(ang.x,ang.y,ang.z))
+            |> List.reduce (fun l r -> l * r)
+        let obj = toObject(ast, material)
+        Transform(mats,invMats,obj,material)
+    // use self saved material
+    | Objects_node (m, l) ->
+        let ls = List.map (fun obj -> toObject(obj, m)) l
+        Group(ls)
+    | Group_node l ->
+        let ls = List.map (fun obj -> toObject(obj, -1)) l
+        Group(ls)
+let groupToObjects(obj:ObjectAST) : IObject3D list =
+    [toObject(obj, -1)]
 
+let pUniformScale =
+    keyword_UniformScale >>. spaces >>. pfloat .>> spaces |>> TransformAst.UniformScale_node
+let pTranslate =
+    keyword_Translate >>. spaces >>. pVector .>> spaces |>> TransformAst.Translate_node
+let pScale =
+    keyword_Scale >>. spaces >>. pVector .>> spaces |>> TransformAst.Scale_node
+let pXRotate =
+    keyword_XRotate >>. spaces >>. pfloat .>> spaces |>> TransformAst.XRotate_node
+let pYRotate =
+    keyword_YRotate >>. spaces >>. pfloat .>> spaces |>> TransformAst.YRotate_node
+let pZRotate =
+    keyword_ZRotate >>. spaces >>. pfloat .>> spaces |>> TransformAst.ZRotate_node
+let pRotate =
+    keyword_Rotate >>. spaces >>. pVector .>> spaces |>> TransformAst.Rotate_node
 
 let pNumObjects =
     keyword_NumObjects .>> spaces >>. pint32 .>> spaces
@@ -370,12 +502,55 @@ let pPlane =
     between beginScope endScope
             (keyword_Normal >>. spaces >>. pVector .>> spaces .>>
              keyword_Offset .>> spaces .>>. pfloat |>> ObjectAST.Plane_node)
+let pTriangle =
+    keyword_Triangle >>.
+    between beginScope endScope
+            (keyword_Vertex0 >>. spaces >>. pPoint .>> spaces .>>
+             keyword_Vertex1 .>> spaces .>>. pPoint .>> spaces .>>
+             keyword_Vertex2 .>> spaces .>>. pPoint |>> ObjectAST.Triangle_node)
+let pFilename =
+    manyChars (letter <|> digit <|> anyOf "._")
+let pTriangleMesh =
+    keyword_TriangleMesh >>.
+    between beginScope endScope
+            (keyword_Objfile >>. spaces >>. pFilename |>> ObjectAST.TrianbleMesh_node)
+    
+let pTransformation =
+    many (choice [
+        pUniformScale
+        pTranslate
+        pScale
+        pXRotate
+        pYRotate
+        pZRotate
+        pRotate
+    ])
+let pRecObjectAst, pRecObjectAstRef = createParserForwardedToRef<ObjectAST,unit>()
+let pRecGroup, pRecGroupRef = createParserForwardedToRef<ObjectAST, unit>()
+let pTransform =
+    keyword_Transform >>.
+    between beginScope endScope
+            (pTransformation .>> spaces .>>. pRecObjectAst) |>> ObjectAST.Transform_node
+//************ parser Group of Objects
 let pObjectAst =
-    pSphere <|> pPlane
+    choice [
+        pSphere
+        pPlane
+        pTriangleMesh
+        pTriangle
+        pTransform
+        pRecGroup
+    ]
+pRecObjectAstRef.Value <- pObjectAst
 let pObject =
     keyword_MaterialIndex >>. spaces >>. pint32 .>> spaces .>>.
-    many pObjectAst |>> toObjects
-let pObjects = many pObject |>> List.concat
+    many pObjectAst |>> ObjectAST.Objects_node // |>> toObjects
+let pObjects = many (pObjectAst <|> pObject) |>> ObjectAST.Group_node // |>> List.concat
+let pOneGroup =
+    keyword_Group >>.
+    between beginScope endScope
+            (pNumObjects >>. pObjects)
+pRecGroupRef.Value <- pOneGroup
 
 let toPerspectiveCamera(((c,d),u),a) = PerspectiveCamera(c,d,u,a,1.) :> ICamera
 let pPerspectiveCameraContent =
@@ -409,9 +584,7 @@ let pMaterials =
             (keyword_NumMaterials .>> spaces >>. pint32 .>> spaces >>.
                 many pMaterial)
 let pGroup =
-    keyword_Group >>.
-    between beginScope endScope
-            (pNumObjects >>. pObjects)
+    pOneGroup |>> groupToObjects
 let pScene =
     spaces >>. pCamera .>>
     spaces .>>. pLights .>>
@@ -420,8 +593,9 @@ let pScene =
     spaces .>>. pGroup |>> toScene
 
 
-let test p str =
-    match run p str with
+let ParseScene filename =
+    let lines = System.IO.File.ReadAllText(filename)
+    match run pScene lines with
     | Success(result, _, _)   -> result
     | Failure(errorMsg, _, _) ->
         printfn "Failure: %s" errorMsg
@@ -477,11 +651,13 @@ let ShowMat(screen:Screen, desc:string) =
 let LoadScene_Assignment2() =
     // Source file(eg. scene1_01.txt) from https://groups.csail.mit.edu/graphics/classes/6.837/F04/assignments/assignment2/
     //let info = RayTracer_Info("raytracer -input scene2_06_plane.txt -size 200 200 -output output2_06.tga -depth 7 20 depth2_06.tga -normals normals2_06.tga")
-    let info = RayTracer_Info("raytracer -input scene2_07_sphere_triangles.txt -size 200 200 -output output2_07.tga -depth 9 11 depth2_07.tga -normals normals2_07.tga -shade_back")
+    //let info = RayTracer_Info("raytracer -input scene2_09_bunny_200.txt -size 200 200 -output output2_09.tga")
+    //let info = RayTracer_Info("raytracer -input scene2_13_rotated_squashed_sphere.txt -size 200 200 -output output2_13.tga -normals normals2_13.tga")
+    //let info = RayTracer_Info("raytracer -input scene2_14_axes_cube.txt -size 200 200 -output output2_14.tga")
+    let info = RayTracer_Info("raytracer -input scene2_15_crazy_transforms.txt -size 200 200 -output output2_15.tga")
+    //let info = RayTracer_Info("raytracer -input scene2_16_t_scale.txt -size 200 200 -output output2_16.tga -depth 2 7 depth2_16.tga")
     let screen_size = info.screenSize
-    let mutable lines = System.IO.File.ReadAllText(info.inputFile)
-    //test keyword_OrthographicCamera lines
-    let scene = test pScene lines
+    let scene = ParseScene info.inputFile
     let screen = Screen(screen_size, screen_size)
     let normal = Screen(screen_size, screen_size)
     let depth = Screen(screen_size, screen_size)

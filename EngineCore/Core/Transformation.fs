@@ -19,6 +19,10 @@ type Matrix4x4(numList:double[]) =
         [| for i in idxs do numList[i] |]
     member this.Combine (other:Matrix4x4) =
         this * other
+    member this.Transpose() =
+        let t = [|for i in 0..3 do
+                    this.GetColumn i |] |> Array.concat
+        Matrix4x4(t)
     
     override this.ToString() =
         sprintf "\n%A\n%A\n%A\n%A\n" (this.GetRow 0) (this.GetRow 1) (this.GetRow 2) (this.GetRow 3)
@@ -52,6 +56,13 @@ type Matrix4x4(numList:double[]) =
                 Array.zip vl (r.GetColumn i) |> Array.map (fun (f, b) -> f*b) |> Array.sum |]
         Vector(res[0], res[1], res[2])
 
+    static member MakeIdentity() =
+        let a = [| 1.0; 0.0; 0.0; 0.0;
+                   0.0; 1.0; 0.0; 0.0;
+                   0.0; 0.0; 1.0; 0.0;
+                   0.0; 0.0; 0.0; 1.0|]
+        Matrix4x4(a)
+
     static member MakeDisplacementMatrix(x, y, z) =
         let a = [| 1.0; 0.0; 0.0; 0.0;
                    0.0; 1.0; 0.0; 0.0;
@@ -64,19 +75,47 @@ type Matrix4x4(numList:double[]) =
                    0.0; 0.0; 1.0; 0.0;
                    -x; -y; -z; 1.0|]
         Matrix4x4(a)
-    static member MakeRotateMatrix(roll, pitch, yaw) =
-        let yawTheta = yaw * Math.PI / 180.0
-        let a = [|  cos(yawTheta); 0.0; sin(yawTheta); 0.0;
+    static member MakeRotationXMatrix(theta) =
+        let deg_theta = -theta * Math.PI / 180.0
+        let cos_theta = cos deg_theta
+        let sin_theta = sin deg_theta
+        let a = [|  1.0; 0.0; 0.0; 0.0;
+                    0.0; cos_theta; -sin_theta; 0.0;
+                    0.0; sin_theta; -cos_theta; 0.0;
+                    0.0; 0.0; 0.0; 1.0|]
+        Matrix4x4(a)
+    static member MakeRotationXInvMatrix(theta) =
+        Matrix4x4.MakeRotationXMatrix(-theta)
+    static member MakeRotationYMatrix(theta) =
+        let deg_theta = theta * Math.PI / 180.0
+        let cos_theta = cos deg_theta
+        let sin_theta = sin deg_theta
+        let a = [|  cos_theta; 0.0; sin_theta; 0.0;
                     0.0; 1.0; 0.0; 0.0;
-                    -sin(yawTheta); 0.0; cos(yawTheta); 0.0;
+                    -sin_theta; 0.0; cos_theta; 0.0;
                     0.0; 0.0; 0.0; 1.0|]
         Matrix4x4(a)
-    static member MakeRotateInvMatrix(roll, pitch, yaw) =
-        let a = [|  1.0; 0.0; 0.0; roll;
-                    0.0; 1.0; 0.0; pitch;
-                    0.0; 0.0; 1.0; yaw;
+    static member MakeRotationYInvMatrix(theta) =
+        Matrix4x4.MakeRotationYMatrix(-theta)
+    static member MakeRotationZMatrix(theta) =
+        let deg_theta = -theta * Math.PI / 180.0
+        let cos_theta = cos deg_theta
+        let sin_theta = sin deg_theta
+        let a = [|  cos_theta; -sin_theta; 0.0; 0.0;
+                    sin_theta; cos_theta; 0.0; 0.0;
+                    0.0; 0.0; 1.0; 0.0;
                     0.0; 0.0; 0.0; 1.0|]
         Matrix4x4(a)
+    static member MakeRotationZInvMatrix(theta) =
+        Matrix4x4.MakeRotationZMatrix(-theta)
+    static member MakeRotationMatrix(roll, pitch, yaw) =
+        Matrix4x4.MakeRotationXMatrix(roll) *
+        Matrix4x4.MakeRotationYMatrix(pitch) *
+        Matrix4x4.MakeRotationZMatrix(yaw)
+    static member MakeRotationInvMatrix(roll, pitch, yaw) =
+        Matrix4x4.MakeRotationZInvMatrix(yaw) *
+        Matrix4x4.MakeRotationYInvMatrix(pitch) *
+        Matrix4x4.MakeRotationXInvMatrix(roll)
     static member MakeScaleMatrix(sx, sy, sz) =
         let a = [|  sx; 0.0; 0.0; 0.0;
                     0.0; sy; 0.0; 0.0;

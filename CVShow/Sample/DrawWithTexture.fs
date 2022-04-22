@@ -36,7 +36,7 @@ let DrawCarWithTexture() =
 
     let mutable key = 0
     while key <> int 'q' do
-        let trans = Matrix4x4.MakeScaleMatrix(5,5,5) * Matrix4x4.MakeRotateMatrix(0,0,current)
+        let trans = Matrix4x4.MakeScaleMatrix(5,5,5) * Matrix4x4.MakeRotationMatrix(0,0,current)
 
         let vs = car.Vertexs |> Array.map (fun v -> v*trans)
         let idxs = car.Faces |> Array.map (fun (i,_,_) -> i)

@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <Compile Include="Sample\Assignment_6.837_03_Model_Obj.fs" />
+    <Compile Include="Sample\Assignment4_6.837_03.fs" />
     <Compile Include="Sample\Assignment2_6.837_03.fs" />
     <Compile Include="Sample\Assignment1_6.837_03.fs" />
     <Compile Include="Sample\Assignment0_6.837_03.fs" />

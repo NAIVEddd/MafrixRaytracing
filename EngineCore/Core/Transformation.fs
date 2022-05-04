@@ -9,6 +9,12 @@ type Matrix4x4(numList:double[]) =
     do
         assert(numList.Length = 16)
 
+    static let identity =
+        Matrix4x4([| 1.0; 0.0; 0.0; 0.0;
+                   0.0; 1.0; 0.0; 0.0;
+                   0.0; 0.0; 1.0; 0.0;
+                   0.0; 0.0; 0.0; 1.0|])
+
     new() = Matrix4x4([|for i = 1 to 16 do 0.0|])
 
     member this.GetRow(idx:int) =
@@ -56,12 +62,7 @@ type Matrix4x4(numList:double[]) =
                 Array.zip vl (r.GetColumn i) |> Array.map (fun (f, b) -> f*b) |> Array.sum |]
         Vector(res[0], res[1], res[2])
 
-    static member MakeIdentity() =
-        let a = [| 1.0; 0.0; 0.0; 0.0;
-                   0.0; 1.0; 0.0; 0.0;
-                   0.0; 0.0; 1.0; 0.0;
-                   0.0; 0.0; 0.0; 1.0|]
-        Matrix4x4(a)
+    static member MakeIdentity() = identity
 
     static member MakeDisplacementMatrix(x, y, z) =
         let a = [| 1.0; 0.0; 0.0; 0.0;

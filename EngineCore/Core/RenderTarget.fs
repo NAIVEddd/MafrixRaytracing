@@ -15,7 +15,7 @@ type RenderTarget(width:int, height:int) =
     member this.Item
         with get(x,y) = buffer[x,y], zBuffer[x,y]
         and  set(x,y) (color,z) =
-            if z < zBuffer[x,y] then
+            if zBuffer[x,y] - z > 1e-6  then
                 buffer[x,y]<-color
                 zBuffer[x,y]<-z
     member this.Depth

@@ -1231,6 +1231,134 @@ type DirectionalLight =
             member this.GetIllumination(p:Point) = this.GetIllumination(p)
     end
 
+type ISampler =
+    abstract member GetSamplePosition : n:int -> Point2D
+
+type Sample =
+    struct
+        val position : Point2D
+        val color : Color
+        new(pos, col) = {position=pos;color=col;}
+    end
+
+type RandomSampler =
+    struct
+        member this.GetSamplePosition(n:int) =
+            Point2D(Random.Shared.NextDouble(),
+                    Random.Shared.NextDouble())
+        interface ISampler with
+            member this.GetSamplePosition(n:int) = this.GetSamplePosition(n)
+    end
+
+type UniformSampler =
+    struct
+        val samples : Point2D[]
+        val grid : int
+        val gridSize : Point2D
+        val halfSize : Point2D
+        new(n:int) =
+            let c = sqrt (float n)
+            let s = 1. / c
+            let g = int c
+            let hs = s * 0.5
+            let sz = Point2D(s,s)
+            let hsz = Point2D(hs,hs)
+            {
+                grid = g;
+                gridSize = sz;
+                halfSize = hsz;
+                samples=Array.init n (fun i -> UniformSampler.GetSample(i,g,sz,hsz));
+            }
+        static member GetSample(n:int, grid:int, sz:Point2D, halfsz:Point2D) =
+            let x = float (n % grid)
+            let y = float (n / grid)
+            Point2D(x*sz.x + halfsz.x,
+                    y*sz.y + halfsz.y)
+        member this.GetSamplePosition(n:int) = this.samples[n]
+        interface ISampler with
+            member this.GetSamplePosition(n:int) = this.GetSamplePosition(n)
+    end
+
+type JitteredSampler =
+    struct
+        val rand : RandomSampler
+        val uniform : UniformSampler
+        new(n:int) =
+            {
+                rand = RandomSampler();
+                uniform = UniformSampler(n);
+            }
+        member this.GetSamplePosition(n:int) =
+            let grid = this.uniform.gridSize
+            let rand = this.rand.GetSamplePosition(n)
+            this.uniform.GetSamplePosition(n) +
+                Point2D((rand.x-0.5) * grid.x, (rand.y-0.5) * grid.y)
+        interface ISampler with
+            member this.GetSamplePosition(n:int) = this.GetSamplePosition(n)
+    end
+
+type Film(width:int, height:int, num_samples:int) =
+    let samples = Array2D.zeroCreate<Sample> (width*num_samples) height
+    member this.Width() = width
+    member this.Height() = height
+    member this.Size() = width,height
+    member this.NumSamples() = num_samples
+    member this.GetIndex(x:int,y:int,n:int) = x*num_samples+n,y
+    member this.Item
+        with get(x:int,y:int,n:int) = samples[x*num_samples+n,y]
+        and  set(x:int,y:int,n:int) (samp:Sample) = samples[x*num_samples+n,y] <- samp
+    member this.RenderSamples(samples_file:string, sample_zoom:int) = ()
+    member this.RenderFilter(filter_file:string, filter_zoom:int(*, filter*)) = ()
+        
+type IFilter =
+    abstract member GetColor : i:int * j:int * film:Film -> Color
+    abstract member GetWeight : x:float * y:float -> float  // should not be public method
+
+type BoxFilter =
+    struct
+        val radius : float
+        val pmin : Point2D
+        val pmax : Point2D
+        val w : float
+        new(r:float) =
+            let cel = (r / 0.5 - 1.0) / 2.
+            {
+                radius=cel;
+                pmin=Point2D(-cel,-cel);
+                pmax=Point2D(cel,cel);
+                w=1. / (cel*2. + 1.);
+            }
+        member this.GetColor(i:int,j:int,film:Film) =
+                let pmin = Point2D(this.pmin.x + float i, this.pmin.y + float j)
+                let pmax = Point2D(this.pmax.x + float i, this.pmax.y + float j)
+                let mutable color = Color()
+                for x in (int pmin.x)..(int pmax.x) do
+                    for y in (int pmin.y)..(int pmax.y) do
+                        let w = this.GetWeight(x,y,i,j)
+                        let n = film.NumSamples()
+                        let mutable totalSample = Color()
+                        for i in 0..(n-1) do
+                            totalSample <- totalSample + film[x,y,i].color
+                        totalSample <- totalSample / float n * w
+                        color <- color + totalSample
+                color
+        member this.GetWeight(x:float,y:float,i:int,j:int) = this.w
+        interface IFilter with
+            member this.GetColor(i:int,j:int,film:Film) =
+                this.GetColor(i,j,film)
+            member this.GetWeight(x:float,y:float) = 0.
+    end
+type TentFilter =
+    struct
+    end
+type GaussianFilter =
+    struct
+    end
+
+type Render =
+    struct
+    end
+
 //[<Struct>]
 type Scene =
     val camera : ICamera
@@ -1893,31 +2021,24 @@ let ShowMat(screen:Screen, desc:string) =
 let LoadScene_Assignment6() =
     // Source file(eg. scene1_01.txt) from https://groups.csail.mit.edu/graphics/classes/6.837/F04/assignments/assignment6/
     
-    //let info = RayTracer_Info("raytracer -input scene6_01_sphere.txt -output output6_01b.tga -size 200 200 -grid 10 10 10 -stats")
-    //let info = RayTracer_Info("raytracer -input scene6_01_sphere.txt -output output6_01c.tga -size 200 200 -grid 10 10 10 -visualize_grid")
-    //let info = RayTracer_Info("raytracer -input scene6_02_sphere_triangles.txt -output output6_02c.tga -size 200 200 -stats -shadows")
-    //let info = RayTracer_Info("raytracer -input scene6_02_sphere_triangles.txt -output output6_02b.tga -size 200 200 -grid 10 10 10 -stats")
-    //let info = RayTracer_Info("raytracer -input scene6_02_sphere_triangles.txt -output output6_02e.tga -size 200 200 -grid 10 10 10 -visualize_grid")
-    //let info = RayTracer_Info("raytracer -input scene6_03_sphere_plane.txt -output output6_03d.tga -size 200 200 -grid 10 10 10 -depth 0 7 -stats -shadows")
-    //let info = RayTracer_Info("raytracer -input scene6_04_bunny_mesh_200.txt -output output6_04b.tga -size 200 200 -grid 10 10 7 -stats")
+    let info = RayTracer_Info("raytracer -input scene7_01_sphere_triangle.txt -size 180 180 -output output7_01.tga ")
     //let info = RayTracer_Info("")
     //let info = RayTracer_Info("")
-    //let info = RayTracer_Info("raytracer -input scene6_07_bunny_mesh_40k.txt -output output6_07.tga -size 200 200 -grid 40 40 33 -stats -shadows")
-    //let info = RayTracer_Info("raytracer -input scene6_08_scale_translate.txt -size 200 200 -output output6_08b.tga -grid 15 15 15")
-    //let info = RayTracer_Info("raytracer -input scene6_08_scale_translate.txt -size 200 200 -output output6_08c.tga -grid 15 15 15 -visualize_grid")
-    //let info = RayTracer_Info("raytracer -input scene6_09_rotated_triangles.txt -size 200 200 -output output6_09b.tga -grid 15 15 9")
-    //let info = RayTracer_Info("raytracer -input scene6_09_rotated_triangles.txt -size 200 200 -output output6_09c.tga -grid 15 15 9 -visualize_grid")
-    //let info = RayTracer_Info("raytracer -input scene6_10_nested_transformations.txt -size 200 200 -output output6_10b.tga -grid 30 30 30")
-    //let info = RayTracer_Info("raytracer -input scene6_11_mirrored_floor.txt -size 200 200 -output output6_11b.tga -shadows -bounces 10 -weight 0.01 -grid 40 10 40 -stats")
-    //let info = RayTracer_Info("raytracer -input scene6_12_faceted_gem.txt -size 200 200 -output output6_12b.tga -shadows -shade_back -bounces 5 -weight 0.01 -grid 20 20 20 -stats")
-    //let info = RayTracer_Info("raytracer -input scene6_13_checkerboard.txt -size 200 200 -output output6_13.tga -shadows ")
-    //let info = RayTracer_Info("raytracer -input scene6_14_glass_sphere.txt -size 200 200 -output output6_14.tga -shadows -shade_back -bounces 5 -weight 0.01 -grid 20 20 20")
-    //let info = RayTracer_Info("raytracer -input scene6_15_marble_cubes.txt -size 300 300 -output output6_15.tga ")
     //let info = RayTracer_Info("")
-    //let info = RayTracer_Info("raytracer -input scene6_17_marble_vase.txt -size 300 300 -output output6_17a.tga -grid 15 30 15 -bounces 2 -shadows")
-    //let info = RayTracer_Info("raytracer -input scene6_17_marble_vase.txt -size 300 300 -output output6_17b.tga -grid 15 30 15 -visualize_grid")
-    let info = RayTracer_Info("raytracer -input scene6_18_6.837_logo.txt -size 400 200 -output output6_18a.tga -shadows -shade_back -bounces 5 -weight 0.01 -grid 80 30 3")
-    //let info = RayTracer_Info("raytracer -input scene6_18_6.837_logo.txt -size 400 200 -output output6_18b.tga -grid 80 30 3 -visualize_grid")
+    //let info = RayTracer_Info("")
+    //let info = RayTracer_Info("")
+    //let info = RayTracer_Info("")
+    //let info = RayTracer_Info("")
+    //let info = RayTracer_Info("")
+    //let info = RayTracer_Info("")
+    //let info = RayTracer_Info("")
+    //let info = RayTracer_Info("")
+    //let info = RayTracer_Info("")
+    //let info = RayTracer_Info("")
+    //let info = RayTracer_Info("")
+    //let info = RayTracer_Info("")
+    //let info = RayTracer_Info("")
+    //let info = RayTracer_Info("")
     
     let screen_size = info.screenSize
     let scene = ParseScene info
@@ -1926,6 +2047,7 @@ let LoadScene_Assignment6() =
     let screen = Screen(screen_size, screen_size)
     let normal = Screen(screen_size, screen_size)
     let depth = Screen(screen_size, screen_size)
+
 
     let tracer = RayTracer(scene, info.bounces, info.weight, info.drawFast, info.drawGrid)
     // render begin
@@ -1936,7 +2058,9 @@ let LoadScene_Assignment6() =
     |] |>
     //Array.iter (fun (x,y) ->
     Array.Parallel.iter (fun (x,y) ->
-        let p = Point2D(float x / float screen_size, float y / float screen_size)
+        let samp = Sample()
+        let p = Point2D((float x) / float screen_size, (float y) / float screen_size)
+        //let p = Point2D(float x / float screen_size, float y / float screen_size)
         let c,d = tracer.Trace(p)
         //let c,d = scene.GetColorDepth(p)
         screen[x,y] <- c,d

@@ -1,4 +1,5 @@
 ﻿module Engine.Core.Interfaces.ILight
+open Engine.Core.Interfaces.HitRecord
 open Engine.Core.Interfaces.IHitable
 open Engine.Core.Interfaces.IMaterial
 open Engine.Core.Ray
@@ -10,6 +11,10 @@ type ILight =
     abstract L : HitRecord -> Color
     abstract CastsShadows : unit -> bool
     abstract InShadow : HitRecord * Ray * world:IHitable -> bool
+
+type INewLight =
+    abstract GetDirection : NewHitRecord -> dist:float * toLight:Vector // Normlized
+    abstract L : NewHitRecord * toLight:Vector -> Color
 
 [<AbstractClass>]
 type Light() =

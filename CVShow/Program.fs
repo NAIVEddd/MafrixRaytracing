@@ -3,6 +3,7 @@ open DrawModelCar
 open RayTracing
 open RayTracing1
 open RayTracing2
+open RayTracing3
 open IFS_6_837
 open Assignment1_6_837
 open Assignment2_6_837
@@ -25,4 +26,5 @@ open Assignment6_6_837
 //LoadScene_Assignment2()
 //LoadScene_Assignment4()
 //LoadScene_Assignment5()
-LoadScene_Assignment6()
+//LoadScene_Assignment6()
+DoRayTrace3()

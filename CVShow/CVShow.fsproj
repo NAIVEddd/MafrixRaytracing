@@ -20,6 +20,7 @@
     <Compile Include="Sample\RayTracing.fs" />
     <Compile Include="Sample\RayTracing1.fs" />
     <Compile Include="Sample\RayTracing2.fs" />
+    <Compile Include="Sample\RayTracing3.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 

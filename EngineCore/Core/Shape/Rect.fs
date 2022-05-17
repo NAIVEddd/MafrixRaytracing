@@ -1,8 +1,49 @@
 ﻿module Engine.Core.Shapes.Rect
+open Engine.Core.Shapes.Trangle
+open Engine.Core.Interfaces.ISampler
 open Engine.Core.Interfaces.IHitable
 open Engine.Core.Interfaces.IMaterial
+open Engine.Core.Aggregate
 open Engine.Core.Point
 open Engine.Core.Ray
+open System
+
+type Rect =
+    struct
+        val trig1 : NewTriangle
+        val trig2 : NewTriangle
+        val bound : Bound
+        val area : float
+        new(v0:Point,v1:Point,v2:Point,v3:Point,mat:int) =
+            let t1 = NewTriangle(v0,v1,v2,mat)
+            let t2 = NewTriangle(v0,v2,v3,mat)
+            {
+                trig1 = t1;
+                trig2 = t2;
+                bound = Bound.Union(t1.BoundBox(), t2.BoundBox())
+                area = t1.Area() + t2.Area();
+            }
+        member this.Hit(r:Ray, tMin:float, tMax:float) =
+            let h1 = this.trig1.Hit(r,tMin,tMax)
+            if h1.hit then
+                h1
+            else
+                this.trig2.Hit(r,tMin,tMax)
+        member this.BoundBox() = this.bound
+        member this.SamplePoint() =
+            let s = Random.Shared.NextDouble()
+            if s < 0.5 then
+                this.trig1.SamplePoint()
+            else
+                this.trig2.SamplePoint()
+        member this.Area() = this.area
+        interface INewSamplable with
+            member this.SamplePoint() = this.SamplePoint()
+            member this.Area() = this.Area()
+        interface INewHitable with
+            member this.Hit(r:Ray, tMin:float, tMax:float) = this.Hit(r,tMin,tMax)
+            member this.BoundBox() = this.BoundBox()
+    end
 
 type xy_rect =
     struct

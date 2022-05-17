@@ -48,7 +48,8 @@ type Bound =
         member this.BoundingSphere() =
             let d = this.Diagnal()
             let center = this.pMin + d / 2.0
-            let radius = if Bound.Inside(center, this) then (this.pMax-center).Length else 0.
+            let radius = d.Length / 2.
+            //let radius = if Bound.Inside(center, this) then (this.pMax-center).Length else 0.
             center, radius
         static member DefaultValue =
             let p1 = System.Double.NegativeInfinity

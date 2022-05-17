@@ -1,10 +1,14 @@
 ﻿module Engine.Core.Shapes.Trangle
 open Microsoft.FSharp.Core
 open Microsoft.FSharp.Collections
+open Engine.Core.Interfaces.ISampler
+open Engine.Core.Interfaces.HitRecord
 open Engine.Core.Interfaces.IHitable
 open Engine.Core.Interfaces.IMaterial
+open Engine.Core.Aggregate
 open Engine.Core.Point
 open Engine.Core.Ray
+open System
 
 type VertexsRef =
     struct
@@ -34,7 +38,7 @@ type Trangle =
             }
         member this.Intersect(ray:Ray, v0:Point, v1:Point, v2:Point) =
             let e1 = v1-v0
-            let e2 = v2-v1
+            let e2 = v2-v0
             let s1 = ray.Direction().Cross(e2)
             let divisor = s1.Dot(e1)
             if divisor = 0. then
@@ -89,4 +93,79 @@ type Trangle =
                     HitRecord(true, t, p, normal, r, Some this.material)
                 else
                     HitRecord.Nothing
+    end
+
+type NewTriangle =
+    struct
+        val v0 : Point
+        val v1 : Point
+        val v2 : Point
+        val area : float
+        val normal : Vector
+        val material : int
+        val bound : Bound
+        new(_v0:Point, _v1:Point, _v2:Point, mat) =
+            let e1 = _v1 - _v0
+            let e2 = _v2 - _v0
+            let a = e1.Cross(e2)
+            let al = a.Length
+            let nm = a / al
+            let b0 = Bound.Union(Bound(_v0,_v1),_v2)
+            {
+                v0 = _v0; v1 =_v1; v2 = _v2;
+                area = al * 0.5;
+                normal = nm; material = mat;
+                bound = b0;
+            }
+        member this.PreCalcu(ray:Ray) =
+            let v0 = this.v0
+            let v1 = this.v1
+            let v2 = this.v2
+            let e1 = v1-v0
+            let e2 = v2-v0
+            let s1 = ray.Direction().Cross(e2)
+            let divisor = s1.Dot(e1)
+            
+            //if divisor < 1e-6 then    // only front face
+            if abs divisor < 1e-6 then  // with back face
+                false, 0.,0.,0.
+            else
+                let invDivisor = 1./divisor
+                let d = ray.Origin() - v0
+                let b1 = d.Dot(s1) * invDivisor
+                if (b1 < 0.) || (b1 > 1.) then
+                    false, 0.,0., 0.
+                else
+                    let s2 = d.Cross(e1)
+                    let b2 = ray.Direction().Dot(s2) * invDivisor
+                    if (b2 < 0.) || ((b1 + b2) >= 1.) then
+                        false, 0., 0., 0.
+                    else
+                        let t = e2.Dot(s2) * invDivisor
+                        true, t, b1, b2
+        member this.Hit(r:Ray, tMin:float, tMax:float) =
+            let bHit, t, beta, gamma = this.PreCalcu(r)
+            if bHit && t > tMin then
+                let p = r.PointAtParameter(t)
+                let alpha = 1. - beta - gamma
+                assert(alpha >= 0. && alpha <= 1.)
+                NewHitRecord(t, p, this.normal, r, this.material)
+                //HitRecord(true, t, p, normal, r, Some this.material)
+            else
+                NewHitRecord.Empty
+        member this.BoundBox() = this.bound
+        member this.SamplePoint() =
+            let u = Random.Shared.NextDouble()
+            let v = Random.Shared.NextDouble() * (1.-u)
+            let e1 = this.v1 - this.v0
+            let e2 = this.v2 - this.v0
+            this.v0 + e1 * u + e2 * v
+        member this.Area() = this.area
+
+        interface INewSamplable with
+            member this.SamplePoint() = this.SamplePoint()
+            member this.Area() = this.Area()
+        interface INewHitable with
+            member this.Hit(r:Ray, tMin:float, tMax:float) = this.Hit(r,tMin,tMax)
+            member this.BoundBox() = this.BoundBox()
     end

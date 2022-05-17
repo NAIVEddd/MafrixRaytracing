@@ -1,6 +1,10 @@
 ﻿module Engine.Core.Interfaces.ISampler
 open Engine.Core.Point
 
+type INewSamplable =
+    abstract SamplePoint : unit -> Point
+    abstract Area : unit -> float
+
 type ISampler =
     abstract GenerateSamples : unit -> unit
     abstract SampleUnitSquare : unit -> Point2D

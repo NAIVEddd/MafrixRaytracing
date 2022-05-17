@@ -2,6 +2,9 @@
 open Engine.Core.Ray
 open Engine.Core.Color
 
+type INewTracer =
+    abstract TraceRay : Ray(* * depth: int*) -> Color
+
 type ITracer =
     abstract TraceRay : Ray -> Color
     abstract TraceRay : Ray * depth:int -> Color

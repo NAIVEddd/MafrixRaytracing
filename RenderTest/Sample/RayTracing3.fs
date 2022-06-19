@@ -6,12 +6,14 @@ open Engine.Core.Color
 open Engine.Core.Light
 open Engine.Core.Point
 open Engine.Core.Camera
+open Engine.Core.Material
 open Engine.Core.RenderTarget
 open Engine.Core.Pipeline
 open Engine.Core.Transformation
 open Engine.Core.Texture
 open Engine.Core.Ray
 open Engine.Model.Obj
+open Engine.Model.ObjLoader
 open Engine.Core.Shapes.Sphere
 open Engine.Core.Shapes.Trangle
 open Engine.Core.Shapes.Rect
@@ -48,12 +50,6 @@ let ListHit(items:IHitable[], r:Ray, tmin:float, tmax:float) =
     items |> Array.map(fun i -> i.Hit(r,tmin,tmax)) |> Array.minBy(fun hitrecord -> (
         if hitrecord.bHit then hitrecord.t else tmax))
 
-let GetRandomInUnitSphere(nm:Vector) =
-    let mutable p = Vector(20,20,20)
-    let rand = new System.Random()
-    while p.Dot(p) >= 1.0 || nm.Dot(p) <= 0. do
-        p <- 2.0 * Vector(rand.NextDouble(), rand.NextDouble(), rand.NextDouble()) - Vector(1,1,1)
-    p
 
 let Reflect(v:Vector, n:Vector) = v - 2.0*v.Dot(n)*n
 let Refract(v:Vector, n:Vector, ni_over_nt:float) =
@@ -64,40 +60,6 @@ let Refract(v:Vector, n:Vector, ni_over_nt:float) =
         (true, ni_over_nt*(v-n*dt) - n*sqrt(discriminant))
     else
         (false, Reflect(v, n))
-
-
-let INVPI = 1. / Math.PI
-type Lambertian(a:Color) =
-    let albedo = a
-    member this.Scatter(ray:Ray, hit:NewHitRecord) =
-        assert(abs(1.-hit.normal.Length) < 1e-6)
-        let target = (GetRandomInUnitSphere(hit.normal)).Normalize
-        //let target = (hit.normal + GetRandomInUnitSphere(hit.normal)).Normalize
-        let scattered = Ray(hit.point, target)
-        albedo * INVPI, scattered
-    member this.Shade(hit:NewHitRecord, r:Ray, indirect:Color) =
-        let ei = hit.normal.Dot(r.Direction())
-        assert(ei >= 0.)
-        indirect * 2. * Math.PI * ei
-    interface INewMaterial with
-        member this.Scatter(ray:Ray, hit:NewHitRecord) = this.Scatter(ray,hit)
-        member this.Shade(hit,r,indirect) = this.Shade(hit,r,indirect)
-        member this.BaseColor() = a
-        member this.Emit() = Color()
-type Metal(a:Color, f:float) =
-    let albedo = a
-    let fuzz = if f < 1.0 then f else 1.0
-    member this.Scatter(ray:Ray, hit:NewHitRecord) =
-        let reflected = Reflect(ray.Direction(), hit.normal)
-        let dir = (reflected + fuzz*GetRandomInUnitSphere(hit.normal)).Normalize
-        let scattered = Ray(hit.point, dir)
-        albedo, scattered
-    member this.Shade(hit:NewHitRecord, r:Ray, indirect:Color) = indirect
-    interface INewMaterial with
-        member this.Scatter(ray:Ray, hit:NewHitRecord) = this.Scatter(ray,hit)
-        member this.Shade(hit,r,indirect) = this.Shade(hit,r,indirect)
-        member this.BaseColor() = a
-        member this.Emit() = Color()
             
 type Dielectric(ri:float) =
     let ref_idx = ri
@@ -252,77 +214,26 @@ type Reflective(a:Vector, ls:float, color:Color, tracer:ITracer) =
         member this.Shade(hit, w:obj) =
             tracer.TraceRay(hit.hitRay, 0)
 
-let GetCornellBox() : IHitable[] =
-    let red = Matte(1., 1., Color(0.65, 0.05, 0.05))
-    let white = Matte(1., 1., Color(0.73, 0.73, 0.73))
-    let green = Matte(1., 1., Color(0.12, 0.45, 0.15))
-    let light = Emissive(15., Vector(0, -1, 0), Color(1,1,1))
-    let r1 = flip_normals(yz_rect(0, 555, 0, 555, 555, green))
-    let r2 = yz_rect(0, 555, 0, 555, 0, red)
-    //let r3 = flip_normals(xz_rect(213, 343, 227, 323, 554, light))
-    let r4 = xz_rect(0, 555, 0, 555, 0, white)
-    let r5 = flip_normals(xy_rect(0, 555, 0, 555, 555, white))
-    let r6 = flip_normals(xz_rect(0, 555, 0, 555, 555, white))
-    let b1 = Translate(Rotate_y(Box(Vector(0, 0, 0), Vector(165, 165, 165), white), -18), Vector(130, 0, 65))
-    let b2 = Translate(Rotate_y(Box(Vector(0, 0, 0), Vector(165, 330, 165), white), 15), Vector(265, 0, 295))
-    [||]
-    //[|r1;r2;r3;r4;r5;r6;b1;b2|]
+//let Light = NewPointLight(Point(0,1.98,0), Color(0.78,0.78,0.78)):>INewLight
+let AreaLight = NewAreaLight(Point(-0.24,1.98,0.16),Point(-0.24,1.98,-0.22),Point(0.23,1.98,-0.22),Point(0.23,1.98,0.16),Vector(0,-1,0),Color(20,20,20)):>INewLight
 
-let GetSpheres() : INewHitable[] =
-    let m1 = Lambertian(Color(0.725,0.71,0.68))
-    let mats : INewMaterial[] = [|m1;|]
-    MaterialManager.GetManager().Add(mats)
+let clamp(x:float) = if x < 0. then 0. elif x > 1. then 1. else x
+let saturate(col:Color) =
+    let r = clamp(col.r)
+    let g = clamp(col.g)
+    let b = clamp(col.b)
+    Color(r,g,b)
 
-    let s1 = NewSphere(Point(0,-100,0), 100, 0)
-    Array.append [|s1;|]
-        [|
-            for i in 0..20 do
-                let r = System.Random.Shared.NextDouble() * 0.5
-                let x = (System.Random.Shared.NextDouble()-0.5) * 2.
-                let z = (System.Random.Shared.NextDouble()-0.5) * 2.
-                yield (NewSphere(Point(x,r,z),r,0):>INewHitable)
-        |]
-
-
-let GetObjects() : INewHitable[] =
-    let m1 = Lambertian(Color(0.725,0.71,0.68))
-    let m2 = Lambertian(Color(0.725,0.71,0.68))
-    let m3 = Lambertian(Color(0.725,0.71,0.68))
-    let m4 = Lambertian(Color(0.14,0.45,0.091))
-    let m5 = Lambertian(Color(0.63,0.065,0.05))
-    let m6 = Emissive(1., Vector(0,-1,0), Color(1,1,1))
-    let m7 = Lambertian(Color(0.725,0.71,0.68))
-    let m8 = Lambertian(Color(0.725,0.71,0.68))
-    let m9 = Metal(Color(0.5,0.5,0.5), 0)
-    let m10 = Dielectric(1.61)
-    let mats : INewMaterial[] = [|m1;m2;m3;m4;m5;m6;m7;m8;m9;m10;|]
-    MaterialManager.GetManager().Add(mats)
-
-    let s0 = Rect(Point(-0.24,1.98,0.16),Point(-0.24,1.98,-0.22),Point(0.23,1.98,-0.22),Point(0.23,1.98,0.16), 5)
-    let s1 = Rect(Point(-1.01,0.,0.99),Point(1.0,0.,0.99),Point(1.0,0.,-1.04),Point(-0.99,0.,-1.04), 0)
-    let s2 = Rect(Point(-1.02,1.99,0.99),Point(-1.02,1.99,-1.04),Point(1.0,1.99,-1.04),Point(1.0,1.99,0.99), 1)
-    let s3 = Rect(Point(-0.99,0.,-1.04),Point(1.,0.,-1.04),Point(1.,1.99,-1.04),Point(-1.02,1.99,-1.04), 2)
-    let s4 = Rect(Point(1.,0.,-1.04),Point(1.,0.,0.99),Point(1.,1.99,0.99),Point(1.,1.99,-1.04),3)
-    let s5 = Rect(Point(-1.01,0.,0.99),Point(-0.99,0.,-1.04),Point(-1.02,1.99,-1.04),Point(-1.02,1.99,0.99),4)
-    let sb1 = Rect(Point(0.53,0.60,0.75),Point(0.70,0.60,0.17),Point(0.13,0.60,0.),Point(-0.05,0.6,0.57), 6)
-    let sb2 = Rect(Point(-0.05,0.,0.57),Point(-0.05,0.6,0.57),Point(0.13,0.6,0.),Point(0.13,0.,0.), 6)
-    let sb3 = Rect(Point(0.53,0.,0.75),Point(0.53,0.6,0.75),Point(-0.05,0.6,0.57),Point(-0.05,0.,0.57), 6)
-    let sb4 = Rect(Point(0.7,0.,0.17),Point(0.7,0.6,0.17),Point(0.53,0.6,0.75),Point(0.53,0.,0.75), 6)
-    let sb5 = Rect(Point(0.13,0.,0.),Point(0.13,0.6,0.),Point(0.7,0.6,0.17),Point(0.7,0.,0.17), 6)
-    let sb6 = (*Bottom*) Rect(Point(0.53,0.,0.75),Point(0.7,0.,0.17),Point(0.13,0.,0.),Point(-0.05,0.,0.57), 6)
-    let tb1 = Rect(Point(-0.53,1.2,0.09),Point(0.04,1.2,-0.09),Point(-0.14,1.2,-0.67),Point(-0.71,1.2,-0.49), 8)
-    let tb2 = Rect(Point(-0.53,0.,0.09),Point(-0.53,1.2,0.09),Point(-0.71,1.2,-0.49),Point(-0.71,0.,-0.49), 8)
-    let tb3 = Rect(Point(-0.71,0.,-0.49),Point(-0.71,1.2,-0.49),Point(-0.14,1.2,-0.67),Point(-0.14,0.,-0.67), 8)
-    let tb4 = Rect(Point(-0.14,0.,-0.67),Point(-0.14,1.2,-0.67),Point(0.04,1.2,-0.09),Point(0.04,0.,-0.09), 8)
-    let tb5 = Rect(Point(0.04,0.,-0.09),Point(0.04,1.2,-0.09),Point(-0.53,1.2,0.09),Point(-0.53,0.,0.09), 8)
-    let tb6 = Rect(Point(-0.53,0.,0.09),Point(0.04,0.,-0.09),Point(-0.14,0.,-0.67),Point(-0.71,0.,-0.49), 8)
-    let sph = NewSphere(Point(-0.6,0.25,0.6),0.25,9)
-
-    [|s0;s1;s2;s3;s4;s5;sb1;sb2;sb3;sb4;sb5;sb6;tb1;tb2;tb3;tb4;tb5;tb6;sph;|]
-    //[|s1;s2;s3;s4;s5;sb1;sb2;sb3;sb4;sb5;sb6;tb1;tb2;tb3;tb4;tb5;tb6;sph;|]
-
-let Light = NewPointLight(Point(0,1.98,0), Color(0.78,0.78,0.78)):>INewLight
-let AreaLight = NewAreaLight(Point(-0.24,1.98,0.16),Point(-0.24,1.98,-0.22),Point(0.23,1.98,-0.22),Point(0.23,1.98,0.16),Vector(0,-1,0),Color(10,10,10)):>INewLight
+let ACESFilmToneMapping(x:Color) =
+    // Source code from:
+    //      https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
+    let a = 2.51
+    let b = 0.03
+    let c = 2.43
+    let d = 0.59
+    let e = 0.14
+    let col = ((x*(a*x+b))/(x*(c*x+d)+e))
+    saturate(col)
 
 let DrawScreenByPixel(cam:Camera, bvh:Bvh, objs:INewHitable[], screen:Screen, arr:(int*int) array, samplePerPixel:int) =
     let ns = samplePerPixel
@@ -342,6 +253,7 @@ let DrawScreenByPixel(cam:Camera, bvh:Bvh, objs:INewHitable[], screen:Screen, ar
                 let c = trace.TraceRay(ray)
                 col <- col + c
             col <- col / float ns
+            col <- ACESFilmToneMapping(col)
             col <- Color(sqrt(col.r), sqrt(col.g), sqrt(col.b))
             let ir = int (255.99*col.r)
             let ig = int (255.99*col.g)
@@ -349,9 +261,10 @@ let DrawScreenByPixel(cam:Camera, bvh:Bvh, objs:INewHitable[], screen:Screen, ar
             screen[i,(ny-1)-j] <- Color(ir,ig,ib), 1)
 
 let DoRayTrace3() =
+    let result = LoadObjModel("CornellBox-Original.obj")
     let nx = 300
     let ny = 300
-    let ns = 200
+    let ns = 20
 
     let cam = new Camera(Point(0, 1, 3),Vector(0,0,-1), 120.0, 0.5, 1000.0, nx, ny)
 
@@ -361,8 +274,9 @@ let DoRayTrace3() =
     let (w,h) = screen.Size()
     let arr = Array.allPairs [|0..w-1|] [|0..h-1|]
 
-    let objs = GetObjects()
-    //let objs = GetSpheres()
+    //MaterialManager.GetManager()[5] <- SpecularTransmission(Color(0.6,0.6,0.6), 1.0, 1.51)
+
+    let objs = result.faces.ToArray()
     let bvh = Bvh.Build(objs)
     let RenderWithSingleFrame() =
         //random shuffer pixels

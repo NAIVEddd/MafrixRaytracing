@@ -155,11 +155,18 @@ type NewTriangle =
                 NewHitRecord.Empty
         member this.BoundBox() = this.bound
         member this.SamplePoint() =
-            let u = Random.Shared.NextDouble()
-            let v = Random.Shared.NextDouble() * (1.-u)
+            // use barycentric coordinate to yield sample position
+            //    <<Handbook of digital image synthesis>> p.255
+            let tu = Random.Shared.NextDouble()
+            let tv = Random.Shared.NextDouble()
+            let u,v = if tu+tv>1. then 1.-tu,1.-tv else tu,tv
             let e1 = this.v1 - this.v0
             let e2 = this.v2 - this.v0
-            this.v0 + e1 * u + e2 * v
+            let sqrt_tmp = sqrt(1.-u)
+            //let s0 = (1. - v) * sqrt_tmp
+            let s1 = 1. - sqrt_tmp
+            let s2 = v * sqrt_tmp
+            this.v0 + e1 * s1 + e2 * s2
         member this.Area() = this.area
 
         interface INewSamplable with

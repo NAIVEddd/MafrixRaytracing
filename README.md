@@ -1,4 +1,5 @@
-# LittleGraphicShow
+# MaFrixRender
+The MaFrix name come from 'Matrix' and 'False'.
 
 This project is soft ray tracing engine, main lang using is FSharp.
 

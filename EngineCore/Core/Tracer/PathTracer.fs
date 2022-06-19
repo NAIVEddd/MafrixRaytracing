@@ -24,15 +24,21 @@ type NewPathTracer(bvh:Bvh, maxDepth, light:INewLight) =
         let hit = bvh.Hit(ray,1e-6,99999999.)
         if hit.hit && depth >= 0 then
             let material = MaterialManager.GetManager()[hit.materialIndex]
-            if hit.materialIndex = 5 then
-                material.BaseColor()
-            else
-                let col, r = material.Scatter(ray, hit)
-                let t = this.TraceRay(r, depth - 1)
-                let shade = material.Shade(hit,r,t)
-                let l = this.VisibilityTest(hit)
-                l * col // direct light
-                    + col * shade
+            //if hit.materialIndex = 5 then
+            //    material.BaseColor()
+            //else
+            //    let col, r = material.Scatter(ray, hit)
+            //    let t = this.TraceRay(r, depth - 1)
+            //    let shade = material.Shade(hit,r,t)
+            //    let l = this.VisibilityTest(hit)
+            //    l * col // direct light
+            //        + col * shade
+            let col, r = material.Scatter(ray, hit)
+            let t = this.TraceRay(r, depth - 1)
+            let shade = material.Shade(hit,r,t)
+            let l = this.VisibilityTest(hit)
+            l * col // direct light
+                + col * shade
         else
             Color()
     member this.Trace(ray:Ray) = this.TraceRay(ray, maxDepth)

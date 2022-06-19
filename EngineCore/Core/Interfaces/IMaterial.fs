@@ -12,6 +12,12 @@ type IMaterial =
 
 and HitRecord = HitRecordT<IMaterial>
 
+type IBxdf =
+    abstract member F : wo:Vector * wi:Vector -> Color
+    abstract member Pdf : wo:Vector * wi:Vector -> float
+    abstract member SampleF : wo:Vector * wi:Vector * sample:Point2D -> pdf:float * Color
+    abstract member Rho : wo:Vector * sample:Point2D -> Color   // get reflectance
+
 type INewMaterial =
     abstract member Scatter : ray:Ray * NewHitRecord -> Color * Ray
     abstract member Shade : NewHitRecord * scatteredRay:Ray * indirectLight:Color -> Color
@@ -28,5 +34,9 @@ type MaterialManager() as this =
 
     member this.Item
         with get(i) = this.materials[i]
-    member this.Add(mat:INewMaterial) = this.materials <- Array.insertAt this.materials.Length mat this.materials
+        and  set i m = this.materials[i] <- m
+    member this.Add(mat:INewMaterial) =
+        let len = this.materials.Length
+        this.materials <- Array.insertAt len mat this.materials
+        len
     member this.Add(mats:INewMaterial seq) = this.materials <- Array.insertManyAt this.materials.Length mats this.materials

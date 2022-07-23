@@ -1,7 +1,6 @@
 ﻿module RayTracing
 
 open System
-open OpenCvSharp
 open Engine.Core.Color
 open Engine.Core.Light
 open Engine.Core.Point
@@ -440,35 +439,36 @@ let DoRayTrace() =
     let hitableList = RandomScene(rand)
 
     let screen = new Screen(nx, ny)
-    let mat = new Mat(Size(nx, ny), MatType.CV_8UC3)
-    let indexer = mat.GetGenericIndexer<Vec3b>()
-    let (w,h) = screen.Size()
-    let arr = Array.allPairs [|0..w-1|] [|0..h-1|]
-    arr |> Array.map(fun (i,j) -> 
-            async{
-                let mutable col = Color()
-                for s = 0 to ns-1 do
-                    let u = (float i + rand.NextDouble()) / float nx
-                    let v = (float j + rand.NextDouble()) / float ny
-                    let ray = cam.GetRay(u,v)
-                    let c = GetColor(ray, hitableList, 0)
-                    col <- col + c
-                col <- col / float ns
-                col <- Color(sqrt(col.r), sqrt(col.g), sqrt(col.b))
-                let ir = int (255.99*col.r)
-                let ig = int (255.99*col.g)
-                let ib = int (255.99*col.b)
-                screen[i,(ny-1)-j] <- Color(ir,ig,ib), 1
-            })
-        |> Async.Parallel
-        |> Async.Ignore
-        |> Async.RunSynchronously
+    //let mat = new Mat(Size(nx, ny), MatType.CV_8UC3)
+    //let indexer = mat.GetGenericIndexer<Vec3b>()
+    //let (w,h) = screen.Size()
+    //let arr = Array.allPairs [|0..w-1|] [|0..h-1|]
+    //arr |> Array.map(fun (i,j) -> 
+    //        async{
+    //            let mutable col = Color()
+    //            for s = 0 to ns-1 do
+    //                let u = (float i + rand.NextDouble()) / float nx
+    //                let v = (float j + rand.NextDouble()) / float ny
+    //                let ray = cam.GetRay(u,v)
+    //                let c = GetColor(ray, hitableList, 0)
+    //                col <- col + c
+    //            col <- col / float ns
+    //            col <- Color(sqrt(col.r), sqrt(col.g), sqrt(col.b))
+    //            let ir = int (255.99*col.r)
+    //            let ig = int (255.99*col.g)
+    //            let ib = int (255.99*col.b)
+    //            screen[i,(ny-1)-j] <- Color(ir,ig,ib), 1
+    //        })
+    //    |> Async.Parallel
+    //    |> Async.Ignore
+    //    |> Async.RunSynchronously
 
 
-    arr |> Array.map(fun(x,y) ->
-        let c = screen.Pixel(x,y)
-        let vec = Vec3b(byte c.b, byte c.g, byte c.r)
-        indexer[y,x] <- vec) |> ignore
+    //arr |> Array.map(fun(x,y) ->
+    //    let c = screen.Pixel(x,y)
+    //    let vec = Vec3b(byte c.b, byte c.g, byte c.r)
+    //    indexer[y,x] <- vec) |> ignore
             
-    Cv2.ImShow("Manga", mat)
-    Cv2.WaitKey() |> ignore
+    //Cv2.ImShow("Manga", mat)
+    //Cv2.WaitKey() |> ignore
+    ()

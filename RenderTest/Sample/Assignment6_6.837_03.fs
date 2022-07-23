@@ -1,6 +1,5 @@
 ﻿module Assignment6_6_837
 
-open OpenCvSharp
 open System
 open System.Collections.Generic
 //open FSharp.Collections
@@ -2009,14 +2008,15 @@ let ParseScene (parseinfo:RayTracer_Info) =
 
 let ShowMat(screen:Screen, desc:string) =
     let (w,h) = screen.Size()
-    let mat = new Mat(Size(w, h), MatType.CV_8UC3)
-    let indexer = mat.GetGenericIndexer<Vec3b>()
-    for y in 0..h-1 do
-        for x in 0..w-1 do
-            let c = screen.Pixel(x,y) * 255.
-            let vec = Vec3b(byte c.b, byte c.g, byte c.r)
-            indexer[y,x] <- vec
-    Cv2.ImShow(desc, mat)
+    //let mat = new Mat(Size(w, h), MatType.CV_8UC3)
+    //let indexer = mat.GetGenericIndexer<Vec3b>()
+    //for y in 0..h-1 do
+    //    for x in 0..w-1 do
+    //        let c = screen.Pixel(x,y) * 255.
+    //        let vec = Vec3b(byte c.b, byte c.g, byte c.r)
+    //        indexer[y,x] <- vec
+    //Cv2.ImShow(desc, mat)
+    ()
     
 let LoadScene_Assignment6() =
     // Source file(eg. scene1_01.txt) from https://groups.csail.mit.edu/graphics/classes/6.837/F04/assignments/assignment6/
@@ -2078,4 +2078,5 @@ let LoadScene_Assignment6() =
     ShowMat(screen, "Colored image")
     if info.drawNormal then ShowMat(normal, "Normal image")
     if info.drawDepth then ShowMat(depth, "Depth image")
-    Cv2.WaitKey() |> ignore
+    //Cv2.WaitKey() |> ignore
+    ()

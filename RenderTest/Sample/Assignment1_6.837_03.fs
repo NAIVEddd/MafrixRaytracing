@@ -1,6 +1,5 @@
 ﻿module Assignment1_6_837
 
-open OpenCvSharp
 open Engine.Core.Color
 open Engine.Core.Ray
 open Engine.Core.Light
@@ -229,14 +228,15 @@ let LoadScene() =
     //render end
 
     let depthField = info.maxDepth - info.minDepth
-    let mat = new Mat(Size(screen_size, screen_size), MatType.CV_8UC3)
-    let indexer = mat.GetGenericIndexer<Vec3b>()
-    let (w,h) = screen.Size()
-    for y in 0..h-1 do
-        for x in 0..w-1 do
-            let c = screen.Pixel(x,y) * 255.
-            //let c = (1. - (screen.Depth(x,y) - info.minDepth) / depthField) * Color(255,255,255)    // Depth
-            let vec = Vec3b(byte c.b, byte c.g, byte c.r)
-            indexer[y,x] <- vec
-    Cv2.ImShow("Assignment 1", mat)
-    Cv2.WaitKey() |> ignore
+    //let mat = new Mat(Size(screen_size, screen_size), MatType.CV_8UC3)
+    //let indexer = mat.GetGenericIndexer<Vec3b>()
+    //let (w,h) = screen.Size()
+    //for y in 0..h-1 do
+    //    for x in 0..w-1 do
+    //        let c = screen.Pixel(x,y) * 255.
+    //        //let c = (1. - (screen.Depth(x,y) - info.minDepth) / depthField) * Color(255,255,255)    // Depth
+    //        let vec = Vec3b(byte c.b, byte c.g, byte c.r)
+    //        indexer[y,x] <- vec
+    //Cv2.ImShow("Assignment 1", mat)
+    //Cv2.WaitKey() |> ignore
+    ()

@@ -52,26 +52,26 @@ let GetHemisphereOrientedToNormal(nm:Vector) =
     let z = nm.z + a
     Vector(x,y,z).Normalize, a / Math.PI
 
-type Lambertian1(kd:float, cd:Color) =
-    inherit Brdf()
-    let sampler = JitteredSampler(256)
-    do
-        sampler.GenerateSamples()
-    override this.Sample_f(hit, wi, wo, u, v, pdf) =
-        let w = hit.normal
-        let v = Vector(0.0034, 1.0, 0.0071).Cross(w).Normalize
-        let u = v.Cross(w)
-        let sp = sampler.SampleHemisphere()
-        //let _wi = sp.x * u + sp.y * v + sp.z * w
-        //wi <- _wi.Normalize
-        let uvw = ONB(w)
-        //wi <- uvw.Local(GetAoCosineDirection())
-        //pdf <- hit.normal.Dot(wi) * inv_pi
-        let twi, tpdf = GetHemisphereOrientedToNormal(w)
-        wi <- twi
-        pdf <- tpdf
-        //kd * cd * inv_pi
-        kd * cd * pdf
+// type Lambertian1(kd:float, cd:Color) =
+//     inherit Brdf()
+//     let sampler = JitteredSampler(256)
+//     do
+//         sampler.GenerateSamples()
+//     override this.Sample_f(hit, wi, wo, u, v, pdf) =
+//         let w = hit.normal
+//         let v = Vector(0.0034, 1.0, 0.0071).Cross(w).Normalize
+//         let u = v.Cross(w)
+//         let sp = sampler.SampleHemisphere()
+//         //let _wi = sp.x * u + sp.y * v + sp.z * w
+//         //wi <- _wi.Normalize
+//         let uvw = ONB(w)
+//         //wi <- uvw.Local(GetAoCosineDirection())
+//         //pdf <- hit.normal.Dot(wi) * inv_pi
+//         let twi, tpdf = GetHemisphereOrientedToNormal(w)
+//         wi <- twi
+//         pdf <- tpdf
+//         //kd * cd * inv_pi
+//         kd * cd * pdf
 
-    override this.f(hit, wi, wo) = kd * cd * inv_pi
-    override this.rho(wo,nSamples,samples) = kd*cd
+//     override this.f(hit, wi, wo) = kd * cd * inv_pi
+//     override this.rho(wo,nSamples,samples) = kd*cd

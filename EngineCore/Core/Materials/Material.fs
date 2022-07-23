@@ -24,20 +24,33 @@ let Refract(v:Vector, n:Vector, ni_over_nt:float) =
         (false, Reflect(v, n))
 
 let INVPI = 1. / Math.PI
+let TwoPi = 2. * Math.PI
+
+type LambertianBrdf(a:Color) =
+    interface IBxdf with
+        member this.F(wo:Vector, wi:Vector) = a
+        member this.Pdf(wo:Vector, wi:Vector) = 1.0
+        member this.SampleF(hit, wo:Vector, wi:outref<Vector>, sample:Point2D) =
+            wi <- (GetRandomInUnitSphere(hit.normal)).Normalize
+            let ei = hit.normal.Dot(wi)
+            1., INVPI * a * ei * TwoPi
+        member this.Rho(wo:Vector, sample:Point2D) = Color()
+
 type Lambertian(a:Color) =
     let albedo = a
-    member this.Scatter(ray:Ray, hit:NewHitRecord) =
+    member this.Scatter(ray:Ray, hit:HitRecord) =
         assert(abs(1.-hit.normal.Length) < 1e-6)
         let target = (GetRandomInUnitSphere(hit.normal)).Normalize
         //let target = (hit.normal + GetRandomInUnitSphere(hit.normal)).Normalize
         let scattered = Ray(hit.point, target)
         albedo * INVPI, scattered
-    member this.Shade(hit:NewHitRecord, r:Ray, indirect:Color) =
+    member this.Shade(hit:HitRecord, r:Ray, indirect:Color) =
         let ei = hit.normal.Dot(r.Direction())
         assert(ei >= 0.)
         indirect * 2. * Math.PI * ei
-    interface INewMaterial with
-        member this.Scatter(ray:Ray, hit:NewHitRecord) = this.Scatter(ray,hit)
+    interface IMaterial with
+        member this.GetBxdf() = new LambertianBrdf(a)
+        member this.Scatter(ray:Ray, hit:HitRecord) = this.Scatter(ray,hit)
         member this.Shade(hit,r,indirect) = this.Shade(hit,r,indirect)
         member this.BaseColor() = a
         member this.Emit() = Color()
@@ -45,14 +58,15 @@ type Lambertian(a:Color) =
 type Metal(a:Color, f:float) =
     let albedo = a
     let fuzz = if f < 1.0 then f else 1.0
-    member this.Scatter(ray:Ray, hit:NewHitRecord) =
+    member this.Scatter(ray:Ray, hit:HitRecord) =
         let reflected = Reflect(ray.Direction(), hit.normal)
         let dir = (reflected + fuzz*GetRandomInUnitSphere(hit.normal)).Normalize
         let scattered = Ray(hit.point, dir)
         albedo, scattered
-    member this.Shade(hit:NewHitRecord, r:Ray, indirect:Color) = indirect
-    interface INewMaterial with
-        member this.Scatter(ray:Ray, hit:NewHitRecord) = this.Scatter(ray,hit)
+    member this.Shade(hit:HitRecord, r:Ray, indirect:Color) = indirect
+    interface IMaterial with
+        member this.GetBxdf() = new LambertianBrdf(a)
+        member this.Scatter(ray:Ray, hit:HitRecord) = this.Scatter(ray,hit)
         member this.Shade(hit,r,indirect) = this.Shade(hit,r,indirect)
         member this.BaseColor() = a
         member this.Emit() = Color()
@@ -86,7 +100,7 @@ type SpecularTransmission(t:Color, ei:float, et:float) =
     let etai = ei
     let etat = et
     let fresnel = FresnelDielectric(ei,et)
-    member this.Scatter(ray:Ray, hit:NewHitRecord) =
+    member this.Scatter(ray:Ray, hit:HitRecord) =
         let dir = -ray.Direction()
         let cosi = dir.Dot(hit.normal)
         let ei, et =
@@ -102,9 +116,10 @@ type SpecularTransmission(t:Color, ei:float, et:float) =
             else
                 Color()
         color, Ray(hit.point, refract)
-    member this.Shade(hit:NewHitRecord, r:Ray, indirect:Color) = indirect
-    interface INewMaterial with
-        member this.Scatter(ray:Ray, hit:NewHitRecord) = this.Scatter(ray,hit)
+    member this.Shade(hit:HitRecord, r:Ray, indirect:Color) = indirect
+    interface IMaterial with
+        member this.GetBxdf() = new LambertianBrdf(Color())
+        member this.Scatter(ray:Ray, hit:HitRecord) = this.Scatter(ray,hit)
         member this.Shade(hit,r,indirect) = this.Shade(hit,r,indirect)
         member this.BaseColor() = T
         member this.Emit() = Color()

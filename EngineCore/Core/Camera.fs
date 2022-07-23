@@ -3,6 +3,7 @@ open System
 open Point
 open Ray
 open Transformation
+open Interfaces.ICamera
 
 type UVN(dir:Vector, ?up:Vector) =
     let mutable u = Vector()
@@ -51,9 +52,9 @@ type Camera(pos:Point, dir:Vector, fov:double, nearClip:double, farClip:double, 
     let mutable verticle = Vector()
 
     do
-        upperLeftCorner <- pos - 0.5 * (float width) * uvn.U - 0.5 * (float height) * uvn.V + viewDistance * uvn.N
+        upperLeftCorner <- pos - 0.5 * (float width) * uvn.U - 0.5 * (float -height) * uvn.V + viewDistance * uvn.N
         horizontal <- (float width) * uvn.U
-        verticle <- (float height) * uvn.V
+        verticle <- (float -height) * uvn.V
 
     member this.Position = camPosition
     member this.width = width
@@ -83,3 +84,59 @@ type Camera(pos:Point, dir:Vector, fov:double, nearClip:double, farClip:double, 
         let target = upperLeftCorner + xx * horizontal + yy * verticle
         let dir = (target-this.Position).Normalize
         Ray(this.Position, dir)
+
+[<Struct>]
+type CameraCoordinate =
+    val forward : Vector
+    val up : Vector
+    val right : Vector
+    val down : Vector
+    //val up_size = tan(f * Math.PI / 360.) * 2.0
+    //val hori_size = up_size * asp
+    new(dir:Vector, ?up:Vector) =
+        let dir = dir.Normalize
+        let _up = (defaultArg up (Vector(0,1,0))).Normalize
+        let hori = dir.Cross(_up.Normalize)
+        let vert = hori.Cross(dir)
+        {
+            forward=dir; up=vert;
+            right=hori;  down= -vert;
+        }
+    new(dir:Vector, up:Vector, right:Vector) =
+        {
+            forward=dir; up=up;
+            right=right; down= -up;
+        }
+    member this.TopLeft(pos:Point, dist:float) =
+        pos + dist * this.forward - 0.5 * this.right + 0.5 * this.up
+
+type PinholeCamera =
+    val mutable position : Point
+    val mutable topleft : Point
+    val mutable coord : CameraCoordinate
+    val fov : float
+    val hori_size : float
+    val vert_size : float
+    override this.ToString() =
+        sprintf "PinholeCamera:\n\tPosition=%A\n\tLookAt=%A\n\tFov=%A\n\tAspectRatio=%A" this.position this.coord.forward this.fov (this.hori_size/this.vert_size)
+    new(pos:Point, dir:Vector, fov:float, aspectRatio:float) =
+        let tmp = CameraCoordinate(dir)
+        // visual plane place in the front 0.5 unit
+        let hori = tan(0.5 * fov * Math.PI / 360.)
+        let vert = hori / aspectRatio
+        let coord = CameraCoordinate(tmp.forward, tmp.up * vert, tmp.right * hori)
+        {
+            position = pos; coord = coord;
+            fov = fov;
+            hori_size = hori; vert_size = vert;
+            topleft = coord.TopLeft(pos, 0.5);
+        }
+    member this.GetRay(u:float, v:float) =
+        assert(u >= 0. && u <= 1.)
+        assert(v >= 0. && v <= 1.)
+        let target = this.topleft + u * this.coord.right + v * this.coord.down
+        let dir = (target - this.position).Normalize
+        Ray(this.position, dir)
+
+    interface ICamera with
+        member this.GetRay(u:float, v:float) = this.GetRay(u,v)

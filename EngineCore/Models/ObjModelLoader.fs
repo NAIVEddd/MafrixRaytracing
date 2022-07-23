@@ -2,11 +2,12 @@
 open Engine.Model.Obj_Mtl
 open Engine.Core.Color
 open Engine.Core.Point
-open Engine.Core.Shapes.Trangle
+open Engine.Core.Shapes.Triangle
 open Engine.Core.Shapes.Rect
 open Engine.Core.Interfaces.IHitable
 open FParsec
 open System.Collections
+open FSharp.Collections
 open System.IO
 
 type VertexData =
@@ -18,21 +19,38 @@ type ObjState =
     val vertices : Point ResizeArray
     val textures : Point2D ResizeArray
     val normals : Vector ResizeArray
-    val faces : INewHitable ResizeArray
+    val mutable facesMaps : Map<string, IHitable ResizeArray>
+    val facesDef : (string * IHitable) ResizeArray
+    val faces : IHitable ResizeArray
+    val mutable curGroup : string
     new() =
+        let emp = Map [("default", ResizeArray<IHitable>())]
         {
             vertices = ResizeArray<Point>();
             textures = ResizeArray<Point2D>();
             normals = ResizeArray<Vector>();
-            faces = ResizeArray<INewHitable>();
+            facesMaps = emp;
+            facesDef = ResizeArray<string * IHitable>();
+            curGroup = "default";
+            faces = ResizeArray<IHitable>();
         }
     member this.InsertData(data:VertexData) =
         match data with
         | Vertex p -> this.vertices.Add(p)
         | Texture p -> this.textures.Add(p)
         | Normal n -> this.normals.Add(n)
-    member this.InsertData(face:INewHitable) =
+    member this.InsertData(face:IHitable) =
+        let tmparray = Map.find this.curGroup this.facesMaps
+        tmparray.Add(face)
+        this.facesMaps <- this.facesMaps.Add (this.curGroup, tmparray)
+        this.facesDef.Add(this.curGroup, face)
         this.faces.Add(face)
+    member this.UpdateGroup(n:string) =
+        this.curGroup <- n
+        let m = Map.tryFind n this.facesMaps
+        match m with
+        | Some _ -> ()
+        | None -> this.facesMaps <- this.facesMaps.Add (n, ResizeArray<IHitable>())
 
 // first reference number is the geometric vertex
 // second reference number is the texture vertex, can be empty
@@ -55,14 +73,14 @@ type Face =
     new(vs: VertexReferencing list) =
         assert(vs.Length >= 3)
         {vertices=vs;}
-    member this.ToHitable(vertex:ObjState, materialIdx:int) :INewHitable =
+    member this.ToHitable(vertex:ObjState, materialIdx:int) :IHitable =
         let vLen = vertex.vertices.Count
         match this.vertices.Length with
         | 3 ->
             let p0 = vertex.vertices[this.vertices[0].VertexIndex(vLen)]
             let p1 = vertex.vertices[this.vertices[1].VertexIndex(vLen)]
             let p2 = vertex.vertices[this.vertices[2].VertexIndex(vLen)]
-            NewTriangle(p0,p1,p2,materialIdx)
+            Triangle(p0,p1,p2,materialIdx)
         | 4 ->
             let p0 = vertex.vertices[this.vertices[0].VertexIndex(vLen)]
             let p1 = vertex.vertices[this.vertices[1].VertexIndex(vLen)]
@@ -281,7 +299,7 @@ let UpdateState(state:ObjState, statement:ObjStatement, setting:StateSettings, m
     | Faces f ->
         let index = materials[setting.usemtl]
         state.InsertData(f.ToHitable(state,index))
-    | GroupStatement _ -> ()
+    | GroupStatement (GroupStatement.Name g) -> state.UpdateGroup(g)
     | StateSetting s -> setting.Update(s)
     | Comment _ -> ()
 
@@ -296,7 +314,7 @@ let LoadObjModel(file:string) =
                 | Comment _ -> false
                 | _ -> true
         )
-        let mtlNameSetting = resultArray |> Array.find (
+        let mtlNameSetting = resultArray |> Array.tryFind (
             fun r ->
                 match r with
                 | StateSetting s ->
@@ -305,14 +323,11 @@ let LoadObjModel(file:string) =
                     | _ -> false
                 | _ -> false
         )
-        let mtlFilename =
+        let materialRefs =
             match mtlNameSetting with
-            | StateSetting s ->
-                match s with
-                | Mtllib names -> names[0]
-                | _ -> ""
-            | _ -> ""
-        let materialRefs = LoadObjModel(mtlFilename)
+            | Some (StateSetting (Mtllib names)) ->
+                LoadObjMtl(names[0])
+            | _ -> MtlMaterialReference([])
         let state = new ObjState()
         let setting = new StateSettings()
         resultArray |> Array.iter (

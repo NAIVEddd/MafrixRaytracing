@@ -9,6 +9,7 @@
     <Compile Include="Core\Color.fs" />
     <Compile Include="Core\Point.fs" />
     <Compile Include="Core\Ray.fs" />
+    <Compile Include="Core\Texture.fs" />
     <Compile Include="Core\Aggregate.fs" />
     <Compile Include="Core\Interfaces\ICamera.fs" />
     <Compile Include="Core\Interfaces\ISampler.fs" />
@@ -18,6 +19,7 @@
     <Compile Include="Core\Interfaces\IHitable.fs" />
     <Compile Include="Core\Interfaces\ILight.fs" />
     <Compile Include="Core\Interfaces\ITracer.fs" />
+    <Compile Include="Core\Interfaces\IIntegrator.fs" />
     <Compile Include="Core\Interfaces\IWorld.fs" />
     <Compile Include="Core\Shape\Sphere.fs" />
     <Compile Include="Core\Shape\Trangle.fs" />
@@ -42,13 +44,14 @@
     <Compile Include="Core\Tracer\RayCast.fs" />
     <Compile Include="Core\Tracer\Whitted.fs" />
     <Compile Include="Core\Tracer\PathTracer.fs" />
-    <Compile Include="Core\World\World.fs" />
+    <Compile Include="Core\Integrator\Integrators.fs" />
     <Compile Include="Core\RenderTarget.fs" />
-    <Compile Include="Core\Texture.fs" />
+    <Compile Include="Core\Film.fs" />
     <Compile Include="Core\Pipeline.fs" />
     <Compile Include="Models\Obj_Mtl.fs" />
     <Compile Include="Models\Model_Obj.fs" />
     <Compile Include="Models\ObjModelLoader.fs" />
+    <Compile Include="Scene\Scene.fs" />
     <Compile Include="Library.fs" />
   </ItemGroup>
 
@@ -58,6 +61,11 @@
 
   <ItemGroup>
     <PackageReference Include="FParsec" Version="1.1.1" />
+    <PackageReference Include="Silk.NET.GLFW" Version="2.15.0" />
+    <PackageReference Include="Silk.NET.Input" Version="2.15.0" />
+    <PackageReference Include="Silk.NET.OpenGL.Extensions.ImGui" Version="2.15.0" />
+    <PackageReference Include="Silk.NET.Windowing" Version="2.15.0" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="2.1.3" />
   </ItemGroup>
 
 </Project>

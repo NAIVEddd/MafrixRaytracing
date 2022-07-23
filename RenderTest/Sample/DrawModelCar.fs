@@ -1,6 +1,5 @@
 ﻿module DrawModelCar
 
-open OpenCvSharp
 open Engine.Core.Color
 open Engine.Core.Light
 open Engine.Core.Point
@@ -89,62 +88,62 @@ let DrawTrangle (cam:Camera, _p1:Point, _p2:Point, _p3:Point) =
                 p2,mid
         Array.append (DrawUpTrangle(cam,p1,left,right)) (DrawDownTrangle(cam,left,right,p3))
 
-let LightRander(cam:Camera, light:Light, objColor:Scalar, vs:Point[], idxs:Indexer[]) =
+//let LightRander(cam:Camera, light:Light, objColor:Scalar, vs:Point[], idxs:Indexer[]) =
     
-    [|
-    for idx in idxs do
-        let col =
-            match light with
-            | AmbientLight ambient-> Scalar(objColor.Val0 * (float ambient.color.r/255.0),
-                                    objColor.Val1 * (float ambient.color.g/255.0),
-                                    objColor.Val2 * (float ambient.color.b/255.0))
-            | DirectionLight direction ->
-                let u = vs[idx.j] - vs[idx.i]
-                let v = vs[idx.k] - vs[idx.i]
-                let normal = u.Cross(v).Normalize
-                let dp = normal.Dot(direction.dir.Normalize)
-                if dp < 0 then
-                    Scalar(-dp * objColor.Val0 * (float direction.diffuse.r/255.0),
-                        -dp * objColor.Val1 * (float direction.diffuse.g/255.0),
-                        -dp * objColor.Val2 * (float direction.diffuse.b/255.0))
-                else
-                    Scalar()
-            | PointLight point -> Scalar()
-        yield col
-    |]
+//    [|
+//    for idx in idxs do
+//        let col =
+//            match light with
+//            | AmbientLight ambient-> Scalar(objColor.Val0 * (float ambient.color.r/255.0),
+//                                    objColor.Val1 * (float ambient.color.g/255.0),
+//                                    objColor.Val2 * (float ambient.color.b/255.0))
+//            | DirectionLight direction ->
+//                let u = vs[idx.j] - vs[idx.i]
+//                let v = vs[idx.k] - vs[idx.i]
+//                let normal = u.Cross(v).Normalize
+//                let dp = normal.Dot(direction.dir.Normalize)
+//                if dp < 0 then
+//                    Scalar(-dp * objColor.Val0 * (float direction.diffuse.r/255.0),
+//                        -dp * objColor.Val1 * (float direction.diffuse.g/255.0),
+//                        -dp * objColor.Val2 * (float direction.diffuse.b/255.0))
+//                else
+//                    Scalar()
+//            | PointLight point -> Scalar()
+//        yield col
+//    |]
 
-let DrawWireframeToScreen (screen:Mat) (color:Scalar) (cam:Camera) (pos:Point) (vs:Point[]) idxs =
-    let objColor = Color(color.Val0, color.Val1, color.Val2, color.Val3)
-    let light = AmbientLight (Ambient_Light(Color(60,60,60,1)))
-    let dirLight = DirectionLight (Direction_Light(Color(), Color(200,200,200,1), Color(), Vector(0,-30,1)))
-    let worldVS = LocalToWorld pos vs
-    let frontIdxs = RemoveBackfaces cam worldVS idxs |> Array.map (fun (a,_,_) -> a)
-    printfn "filted idx:%A\n" frontIdxs
-    let colors = LightRander(cam, light, color, worldVS, frontIdxs)
-    let colors2 = LightRander(cam, dirLight, color, worldVS, frontIdxs)
-    let finColor =
-        Array.zip colors colors2 |>
-        Array.map (fun (a,b) -> Scalar(a.Val0+b.Val0,a.Val1+b.Val1,a.Val2+b.Val2,a.Val3+b.Val3))
-    let screenVS = worldVS |>
-                    WorldToCamera cam |>
-                    CameraToPerspective cam |>
-                    PerspectiveToScreen cam
-    let rand = System.Random(10)
-    let zbuffer = Array2D.init 1024 768 (fun i j -> 99999999.0)
+//let DrawWireframeToScreen (screen:Mat) (color:Scalar) (cam:Camera) (pos:Point) (vs:Point[]) idxs =
+//    let objColor = Color(color.Val0, color.Val1, color.Val2, color.Val3)
+//    let light = AmbientLight (Ambient_Light(Color(60,60,60,1)))
+//    let dirLight = DirectionLight (Direction_Light(Color(), Color(200,200,200,1), Color(), Vector(0,-30,1)))
+//    let worldVS = LocalToWorld pos vs
+//    let frontIdxs = RemoveBackfaces cam worldVS idxs |> Array.map (fun (a,_,_) -> a)
+//    printfn "filted idx:%A\n" frontIdxs
+//    let colors = LightRander(cam, light, color, worldVS, frontIdxs)
+//    let colors2 = LightRander(cam, dirLight, color, worldVS, frontIdxs)
+//    let finColor =
+//        Array.zip colors colors2 |>
+//        Array.map (fun (a,b) -> Scalar(a.Val0+b.Val0,a.Val1+b.Val1,a.Val2+b.Val2,a.Val3+b.Val3))
+//    let screenVS = worldVS |>
+//                    WorldToCamera cam |>
+//                    CameraToPerspective cam |>
+//                    PerspectiveToScreen cam
+//    let rand = System.Random(10)
+//    let zbuffer = Array2D.init 1024 768 (fun i j -> 99999999.0)
 
-    let mutable i = 0
-    for idx in frontIdxs do
-        let p1 = screenVS[idx.i]
-        let p2 = screenVS[idx.j]
-        let p3 = screenVS[idx.k]
-        let points = DrawTrangle(cam,p1,p2,p3)
-        let indexer = screen.GetGenericIndexer<Vec3b>()
-        let vec = Vec3b(byte (finColor[i].Val2), byte (finColor[i].Val1), byte (finColor[i].Val0))
-        for (x,y,z) in points do
-            if z < zbuffer[x,y] then
-                zbuffer[x,y] <- z
-                indexer[y,x] <- vec
-        i <- i + 1
+//    let mutable i = 0
+//    for idx in frontIdxs do
+//        let p1 = screenVS[idx.i]
+//        let p2 = screenVS[idx.j]
+//        let p3 = screenVS[idx.k]
+//        let points = DrawTrangle(cam,p1,p2,p3)
+//        let indexer = screen.GetGenericIndexer<Vec3b>()
+//        let vec = Vec3b(byte (finColor[i].Val2), byte (finColor[i].Val1), byte (finColor[i].Val0))
+//        for (x,y,z) in points do
+//            if z < zbuffer[x,y] then
+//                zbuffer[x,y] <- z
+//                indexer[y,x] <- vec
+//        i <- i + 1
 
 
 let DrawCar() =
@@ -157,12 +156,13 @@ let DrawCar() =
 
     let idxs = car.Faces |> Array.map (fun (i,_,_) -> i)
 
-    let mat = new Mat(Size(1024, 768), MatType.CV_8UC3)
+    //let mat = new Mat(Size(1024, 768), MatType.CV_8UC3)
 
-    let rand = System.Random(10)
-    let color = Scalar(rand.Next(255), rand.Next(255), rand.Next(255))
-    DrawWireframeToScreen mat color cam (Point()) vs car.Faces
+    //let rand = System.Random(10)
+    //let color = Scalar(rand.Next(255), rand.Next(255), rand.Next(255))
+    //DrawWireframeToScreen mat color cam (Point()) vs car.Faces
 
-    Cv2.ImShow("Manga", mat)
+    //Cv2.ImShow("Manga", mat)
 
-    Cv2.WaitKey() |>ignore
+    //Cv2.WaitKey() |>ignore
+    ()

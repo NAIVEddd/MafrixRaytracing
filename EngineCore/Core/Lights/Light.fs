@@ -14,17 +14,18 @@ type NewPointLight =
             {
                 position=pos;intensity=inten;
             }
-        member this.GetDirection(hit:NewHitRecord) =
+        member this.GetDirection(hit:HitRecord) =
             let p = hit.point
             let toLight = this.position - p
             let dist = toLight.Length
             dist, toLight
-        member this.L(hit:NewHitRecord, toLight:Vector) =
+        member this.L(hit:HitRecord, toLight:Vector) =
             let dist = toLight.LengthSquare
             this.intensity / dist
         interface INewLight with
             member this.GetDirection(hit) = this.GetDirection(hit)
             member this.L(hit,toLig) = this.L(hit,toLig)
+            member this.Sample_Li(hit) = 0., 0., Vector()
     end
 
 type NewAreaLight =
@@ -38,13 +39,13 @@ type NewAreaLight =
                 normal = nm;
                 color = c;
             }
-        member this.GetDirection(hit:NewHitRecord) =
+        member this.GetDirection(hit:HitRecord) =
             let p = hit.point
             let lp = this.rect.SamplePoint()
             let toLight = lp - p
             let dist = toLight.Length
             dist, toLight
-        member this.L(hit:NewHitRecord,toLight:Vector) =
+        member this.L(hit:HitRecord,toLight:Vector) =
             let cos_o = toLight.Dot(this.normal)
             if cos_o < 0. then
                 let dist = toLight.LengthSquare
@@ -53,9 +54,13 @@ type NewAreaLight =
                 intensity * solidAngle
             else
                 Color()
+        member this.Sample_Li(hit:HitRecord) =
+            let dist, dir = this.GetDirection(hit)
+            1. / this.rect.area, dist, dir
         interface INewLight with
             member this.GetDirection(hit) = this.GetDirection(hit)
             member this.L(hit,tolig) = this.L(hit,tolig)
+            member this.Sample_Li(hit) = this.Sample_Li(hit)
     end
 
 type Ambient_Light(color:Color) =

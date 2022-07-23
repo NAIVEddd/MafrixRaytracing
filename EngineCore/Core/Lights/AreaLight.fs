@@ -28,51 +28,51 @@ type SphereSampler(location:Point, radius:float, nSamples:int) =
         let p = sampler.SampleUnitSquare()
         this.SampTo3D(p)
 
-type AreaLight(ls:float, radius:float,color:Color,location:Point,dir:Vector,obj:IHitable,world:IHitable) =
-    inherit Light()
-    let sampler = SphereSampler(location, radius, 64)
-    let mutable point = Point()
-    member this.G(hit:HitRecord) = 0.0
-    member this.PDF(hit:HitRecord) = 1.0/64.0
-    override this.GetDirection(record) =
-        point <- sampler.Sample()
-        (point - record.p).Normalize
-    override this.L(record) =
-        //let color =
-        //    [|0..63|] |> Array.map(fun(n) ->
-        //            let p = sampler.Sample()
-        //            let d = (p - record.p).Length
-        //            let r = Ray(record.p, (p - record.p).Normalize)
-        //            let bHit, tmin = world.ShadowHit(r)
-        //            if bHit && tmin < d then
-        //                true
-        //            else
-        //                false)
-        //        |> Array.map(fun(inshadow) ->
-        //            if inshadow then
-        //                Color()
-        //            else
-        //                ls*color)
-        //        |> Array.fold (fun l r -> l+r) (Color())
-        //color / 64.0
-        ls*color
+// type AreaLight(ls:float, radius:float,color:Color,location:Point,dir:Vector,obj:IHitable,world:IHitable) =
+//     inherit Light()
+//     let sampler = SphereSampler(location, radius, 64)
+//     let mutable point = Point()
+//     member this.G(hit:HitRecord) = 0.0
+//     member this.PDF(hit:HitRecord) = 1.0/64.0
+//     override this.GetDirection(record) =
+//         point <- sampler.Sample()
+//         (point - record.p).Normalize
+//     override this.L(record) =
+//         //let color =
+//         //    [|0..63|] |> Array.map(fun(n) ->
+//         //            let p = sampler.Sample()
+//         //            let d = (p - record.p).Length
+//         //            let r = Ray(record.p, (p - record.p).Normalize)
+//         //            let bHit, tmin = world.ShadowHit(r)
+//         //            if bHit && tmin < d then
+//         //                true
+//         //            else
+//         //                false)
+//         //        |> Array.map(fun(inshadow) ->
+//         //            if inshadow then
+//         //                Color()
+//         //            else
+//         //                ls*color)
+//         //        |> Array.fold (fun l r -> l+r) (Color())
+//         //color / 64.0
+//         ls*color
         
-    override this.CastsShadows() = true
-    override this.InShadow(hit:HitRecord, ray:Ray, world:IHitable) =
-        //[|0..63|] |> Array.forall(fun(n) ->
-        //    let p = sampler.Sample()
-        //    let d = (p - ray.Origin()).Length
-        //    let r = Ray(ray.Origin(), (p - ray.Origin()).Normalize)
-        //    let bHit, tmin = world.ShadowHit(r)
-        //    if bHit && tmin < d then
-        //        true
-        //    else
-        //        false)
-        let d = (point - ray.Origin()).Length
-        //let r = Ray(ray.Origin(), (point - ray.Origin()).Normalize)
-        let bHit, tmin = world.ShadowHit(ray)
-        if bHit && tmin < d then
-            true
-        else
-            false
+//     override this.CastsShadows() = true
+//     override this.InShadow(hit:HitRecord, ray:Ray, world:IHitable) =
+//         //[|0..63|] |> Array.forall(fun(n) ->
+//         //    let p = sampler.Sample()
+//         //    let d = (p - ray.Origin()).Length
+//         //    let r = Ray(ray.Origin(), (p - ray.Origin()).Normalize)
+//         //    let bHit, tmin = world.ShadowHit(r)
+//         //    if bHit && tmin < d then
+//         //        true
+//         //    else
+//         //        false)
+//         let d = (point - ray.Origin()).Length
+//         //let r = Ray(ray.Origin(), (point - ray.Origin()).Normalize)
+//         let bHit, tmin = world.ShadowHit(ray)
+//         if bHit && tmin < d then
+//             true
+//         else
+//             false
         

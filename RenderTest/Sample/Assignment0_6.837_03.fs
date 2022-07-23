@@ -1,6 +1,5 @@
 ﻿module IFS_6_837
 
-open OpenCvSharp
 open Engine.Core.Color
 open Engine.Core.Light
 open Engine.Core.Point
@@ -106,13 +105,13 @@ let IFS() =
         if vec.x < info.size && vec.y < info.size && vec.x >= 0.0 && vec.y >= 0.0 then
             screen[int vec.x, int vec.y] <- Color(255,255,255),100
 
-    let mat = new Mat(Size(info.size, info.size), MatType.CV_8UC3)
-    let indexer = mat.GetGenericIndexer<Vec3b>()
-    let (w,h) = screen.Size()
-    for y in 0..h-1 do
-        for x in 0..w-1 do
-            let c = screen.Pixel(x,y)
-            let vec = Vec3b(byte c.b, byte c.g, byte c.r)
-            indexer[y,x] <- vec
-    Cv2.ImShow("IFS", mat)
-    Cv2.WaitKey()
+    //let mat = new Mat(Size(info.size, info.size), MatType.CV_8UC3)
+    //let indexer = mat.GetGenericIndexer<Vec3b>()
+    //let (w,h) = screen.Size()
+    //for y in 0..h-1 do
+    //    for x in 0..w-1 do
+    //        let c = screen.Pixel(x,y)
+    //        let vec = Vec3b(byte c.b, byte c.g, byte c.r)
+    //        indexer[y,x] <- vec
+    //Cv2.ImShow("IFS", mat)
+    //Cv2.WaitKey()

@@ -54,7 +54,12 @@ type MtlMaterialReference =
             reference = Map<string,int>(kvs)
         }
     member this.Item 
-        with get(s:string) = this.reference[s]
+        with get(s:string) =
+            let idx = this.reference.TryFind s
+            match idx with
+            | Some i -> i
+            | None -> 0
+            //this.reference[s]
         //and set (s:string) (v:int) = this.reference <- this.reference.Add (s,v)
 
 let pKeyword_Maplib : Parser<string,unit> = pstring "newmtl" .>> spaces
@@ -191,7 +196,7 @@ let ProcessMaterial(data:MtlFileData[]) =
     let index = MaterialManager.GetManager().Add(lamb)
     (tmpMaterial.file_name, index)
 
-let LoadObjModel(file:string) =
+let LoadObjMtl(file:string) =
     let lines = File.ReadAllText(file)
     let parseResult =
         let tmpResult = run ParseMtlFile lines

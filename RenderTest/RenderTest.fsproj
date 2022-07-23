@@ -8,6 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="Sample\SceneParse.fs" />
     <Compile Include="Sample\Assignment_6.837_03_Model_Obj.fs" />
     <Compile Include="Sample\Assignment6_6.837_03.fs" />
     <Compile Include="Sample\Assignment5_6.837_03.fs" />
@@ -18,17 +19,13 @@
     <Compile Include="Sample\DrawModelCar.fs" />
     <Compile Include="Sample\DrawWithTexture.fs" />
     <Compile Include="Sample\RayTracing.fs" />
-    <Compile Include="Sample\RayTracing1.fs" />
-    <Compile Include="Sample\RayTracing2.fs" />
-    <Compile Include="Sample\RayTracing3.fs" />
+    <Compile Include="Sample\RayTracing4.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="ComputeSharp" Version="2.0.0-alpha.8" />
     <PackageReference Include="FParsec" Version="1.1.1" />
-    <PackageReference Include="OpenCvSharp4" Version="4.5.3.20210817" />
-    <PackageReference Include="OpenCvSharp4.runtime.win" Version="4.5.3.20210817" />
   </ItemGroup>
 
   <ItemGroup>

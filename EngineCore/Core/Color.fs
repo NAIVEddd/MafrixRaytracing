@@ -2,6 +2,8 @@
 
 [<Struct>]
 type Color(_r:float, _g:float, _b:float, _a:float) =
+    override this.ToString() =
+        sprintf "RGB(%A, %A, %A)" this.r this.g this.b
     new(r:float,g:float,b:float) = Color(r,g,b,1.0)
     member this.r = _r
     member this.g = _g

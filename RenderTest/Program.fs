@@ -3,12 +3,6 @@ open DrawModelCar
 open RayTracing
 open RayTracing4
 open SceneParse
-open IFS_6_837
-open Assignment1_6_837
-open Assignment2_6_837
-open Assignment4_6_837
-open Assignment5_6_837
-open Assignment6_6_837
 
 // For more information see https://aka.ms/fsharp-console-apps
 //let model = LoadModel("C:\\allFiles\\Game\\LittleGraphicShow\\.vs\\Assets\\Renault12TL\\Renault12TL.obj")
